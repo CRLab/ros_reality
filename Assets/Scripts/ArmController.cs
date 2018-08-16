@@ -44,6 +44,12 @@ public class ArmController : MonoBehaviour {
             laser.SetActive(false);
         }
 
+        // cancel move actions on grip press
+        if (device.GetPressDown(SteamVR_Controller.ButtonMask.Grip)) {
+            wsc.SendEinMessage("cancelMove");
+            return;
+        }
+
         // close gripper on trigger press
         if (device.GetHairTriggerDown()) {
             gripperClosed = true;
