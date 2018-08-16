@@ -10,7 +10,7 @@ public class URDFParser : MonoBehaviour {
     Dictionary<string, GameObject> robotParts;
 
     public string xmlPath;
-    string relativePath = "URDFs/Baxter/";
+    string relativePath = "URDFs/Fetch/Meshes/";
 
     public GameObject root;
 
@@ -20,25 +20,26 @@ public class URDFParser : MonoBehaviour {
         linkDict = loadLinkDict(xmlPath); //load in all the links into link dictionary
         jointDict = loadJointDict(xmlPath); //load in all the joints into joint dictionary
 
-
         //Instaniate all the gameobject links
         char[] delims = { '/' };
         char[] delims2 = { '.' };
         foreach (KeyValuePair<string, Link> pair in linkDict) {
+
             GameObject instance;
+
             if (pair.Value.getMeshFile() != null) {
                 //Debug.Log(pair.Value.getMeshFile().Split(delims, 5)[4].Split(delims2)[0]);
                 string meshfile = relativePath + pair.Value.getMeshFile().Split(delims, 5)[4].Split(delims2)[0]; // NORMAL
-                                                                                                                 //string meshfile = relativePath + pair.Value.getMeshFile().Split(delims, 5)[4].Split(delims2)[0] + "_decimate2"; // DECIMATED
-                                                                                                                 //Debug.Log(meshfile);
-
-                Debug.Log(meshfile);
-                instance = Instantiate(Resources.Load(meshfile, typeof(GameObject))) as GameObject;
+                                                                                                               
+                //Debug.Log("Meshfile: " + meshfile);
+                instance = Instantiate(Resources.Load(meshfile , typeof(GameObject))) as GameObject;  //ISSUE IS HERE
                 instance.name = pair.Key;
-            }
-            else {
+
+            } else {
                 instance = new GameObject(pair.Key); // we do this because there are some empty links that only serve to attach other things together (ex: right_arm_mount)
+
             }
+
             GameObject origin = new GameObject(pair.Key + "Origin");
             GameObject pivot = new GameObject(pair.Key + "Pivot");
             instance.transform.SetParent(origin.transform); // might have 'false' as second argument here
@@ -48,6 +49,13 @@ public class URDFParser : MonoBehaviour {
 
             pivot.transform.SetParent(root.transform);
         }
+
+        // Destroy any additional cameras that were created
+        Camera[] cameraComponents = root.GetComponentsInChildren<Camera>();
+        foreach (Camera component in cameraComponents) {
+            Destroy(component.gameObject);
+        }
+   
 
         //Create parent heirachy for gameobjects based on joints
 

@@ -14,7 +14,7 @@ public class WebsocketClient : MonoBehaviour {
 
     // Connect happens in Awake so it is finished before other GameObjects are made
     void Awake() {
-        Debug.Log("instantiating websocket");
+        Debug.Log("instantiating websocket...");
         ws = new WebSocket(ip_address);
 
         ws.OnOpen += OnOpenHandler;
@@ -63,8 +63,9 @@ public class WebsocketClient : MonoBehaviour {
         counter++;
     }
 
-    public void SendEinMessage(string message, string arm) {
-        Publish("ein/" + arm + "/forth_commands", message);
+    public void SendEinMessage(string message) {
+        Debug.Log("MSG: " + message);
+        Publish("forth_commands", message);
     }
 
     private void OnMessageHandler(object sender, MessageEventArgs e) {

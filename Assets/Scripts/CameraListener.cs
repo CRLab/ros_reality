@@ -33,6 +33,7 @@ public class CameraListener : MonoBehaviour {
     // Converts the CompressedImage message from base64 into a byte array, and loads the array into texture
     void RenderTexture() {
         try {
+            if (!wsc.messages.ContainsKey(topic)) return;
             string message = wsc.messages[topic];
             byte[] image = System.Convert.FromBase64String(message);
             texture.LoadImage(image);

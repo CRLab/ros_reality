@@ -17,6 +17,8 @@ public class EinMenuScript : MonoBehaviour {
 	// Use this for initialization
 	void Start () 
 	{
+
+        /*
 		GameObject wso = GameObject.FindWithTag ("WebsocketTag");
 		wsc = wso.GetComponent<WebsocketClient> ();
 
@@ -39,8 +41,10 @@ public class EinMenuScript : MonoBehaviour {
 		hpr.onClick.AddListener (handingPose_right);
 		spr.onClick.AddListener (shrugPose_right);
 		cpr.onClick.AddListener (cranePose_right);
+     */
 	}
 
+    /*
 	void goHome_left()
 	{
 		Debug.Log ("cheecker");
@@ -81,6 +85,7 @@ public class EinMenuScript : MonoBehaviour {
 	{
 		wsc.SendEinMessage ("assumeCrane1", "right");
 	}
+    */
 
 
 

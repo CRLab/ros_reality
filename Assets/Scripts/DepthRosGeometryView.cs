@@ -39,6 +39,8 @@ public class DepthRosGeometryView : MonoBehaviour {
     // Update is called once per frame
     void UpdateTexture() {
         try {
+            if (!wsc.messages.ContainsKey(depthTopic)) return;
+
             depthMessage = wsc.messages[depthTopic];
             byte[] depthImage = System.Convert.FromBase64String(depthMessage);
 

@@ -3,6 +3,7 @@
 
 public class TrajectoryController : MonoBehaviour {
 
+    /*
     public string arm;
     private string grip_label;
     private string trigger_label;
@@ -110,6 +111,7 @@ public class TrajectoryController : MonoBehaviour {
         Quaternion temp = (new Quaternion(qIn.x, qIn.z, -qIn.y, qIn.w)) * (new Quaternion(0, 1, 0, 0));
         return temp;
     }
+    */
 
 }
 
