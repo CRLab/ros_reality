@@ -32,6 +32,7 @@ public class ArmController : MonoBehaviour {
     }
 
     private void Update() {
+        scale = TFListener.scale;
 
         // Touchpad press shows the laser pointer
         if (device.GetPress(SteamVR_Controller.ButtonMask.Touchpad)) {
@@ -46,7 +47,13 @@ public class ArmController : MonoBehaviour {
 
         // cancel move actions on grip press
         if (device.GetPressDown(SteamVR_Controller.ButtonMask.Grip)) {
-            wsc.SendEinMessage("cancelMove");
+            Vector3 outPos = UnityToRosPositionAxisConversion(GetComponent<Transform>().position) / scale;
+            Quaternion outQuat = UnityToRosRotationAxisConversion(GetComponent<Transform>().rotation);
+            wsc.SendEinMessage(
+                "moveGripper^" + 
+                outPos.x + "," + outPos.y + "," + outPos.z
+                + "^" + outQuat.x + "," + outQuat.y + "," + outQuat.z + "," + outQuat.w);
+            //wsc.SendEinMessage("cancelMove");
             return;
         }
 
@@ -75,8 +82,6 @@ public class ArmController : MonoBehaviour {
             moveMessageReady = false;
         }
     }
-
-
 
     void Start() {
         // init laser
@@ -112,38 +117,6 @@ public class ArmController : MonoBehaviour {
         laser.transform.localScale = new Vector3(laser.transform.localScale.x, laser.transform.localScale.y, hit.distance);
     }
 
-
-    void SendControls() {
-        scale = TFListener.scale;
-
-        //Convert the Unity position of the hand controller to a ROS position (scaled)
-        Vector3 outPos = UnityToRosPositionAxisConversion(GetComponent<Transform>().position) / scale;
-        //Convert the Unity rotation of the hand controller to a ROS rotation (scaled, quaternions)
-        Quaternion outQuat = UnityToRosRotationAxisConversion(GetComponent<Transform>().rotation);
-        //construct the Ein message to be published
-        string message = "";
-        //Allows movement control with controllers if menu is disabled
-
-        //if deadman switch held in, move to new pose
-        if (Input.GetAxis(grip_label) > 0.5f) {
-            //construct message to move to new pose for the robot end effector 
-            message = outPos.x + " " + outPos.y + " " + outPos.z + " " +
-            outQuat.x + " " + outQuat.y + " " + outQuat.z + " " + outQuat.w + " moveToEEPose";
-            //if touchpad is pressed (Crane game), incrementally move in new direction
-        }
-
-        //If trigger pressed, open the gripper. Else, close gripper
-        if (Input.GetAxis(trigger_label) > 0.5f) {
-            message += " openGripper ";
-        }
-        else {
-            message += " closeGripper ";
-        }
-
-        //Send the message to the websocket client (i.e: publish message onto ROS network)
-        wsc.SendEinMessage(message);
-    }
-
     //Convert 3D Unity position to ROS position 
     Vector3 UnityToRosPositionAxisConversion(Vector3 rosIn) {
         return new Vector3(-rosIn.x, -rosIn.z, rosIn.y);
@@ -151,14 +124,7 @@ public class ArmController : MonoBehaviour {
 
     //Convert 4D Unity quaternion to ROS quaternion
     Quaternion UnityToRosRotationAxisConversion(Quaternion qIn) {
-
-        Quaternion temp = (new Quaternion(qIn.x, qIn.z, -qIn.y, qIn.w)) * (new Quaternion(0, 1, 0, 0));
-        return temp;
-
-        //return new Quaternion(-qIn.z, qIn.x, -qIn.w, -qIn.y);
-        //return new Quaternion(-qIn.z, qIn.w, -qIn.x, -qIn.y);
-        //return new Quaternion(-qIn.z, qIn.w, -qIn.x, -qIn.y);
-        //return new Quaternion(-qIn.z, qIn.x, qIn.w, qIn.y);
+        return (new Quaternion(qIn.x, qIn.z, -qIn.y, qIn.w)) * (new Quaternion(0, 1, 0, 0));
     }
 
 }

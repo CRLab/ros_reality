@@ -30,6 +30,7 @@ public class URDFParser : MonoBehaviour {
             if (pair.Value.getMeshFile() != null) {
                 //Debug.Log(pair.Value.getMeshFile().Split(delims, 5)[4].Split(delims2)[0]);
                 string meshfile = relativePath + pair.Value.getMeshFile().Split(delims, 5)[4].Split(delims2)[0]; // NORMAL
+                Debug.Log("MESH: " + meshfile);
                                                                                                                
                 //Debug.Log("Meshfile: " + meshfile);
                 instance = Instantiate(Resources.Load(meshfile , typeof(GameObject))) as GameObject;  //ISSUE IS HERE

@@ -5,6 +5,9 @@ using System.Collections;
 public class TFListener : MonoBehaviour
 {
 	private WebsocketClient wsc;
+
+    public GameObject cameraRig;
+    public GameObject headCam;
     public string topic = "ros_unity";
 
 	public float scale = 1f;
@@ -66,6 +69,16 @@ public class TFListener : MonoBehaviour
 				//cur.transform.rotation = RosToUnityQuaternionConversion (curRot);
 			}
 		}
+
+        // attach head cam to robot
+        GameObject baseLink = GameObject.Find("head_tilt_linkPivot");
+        Vector3 difference = cameraRig.transform.position - headCam.transform.position;
+        //difference.y = 0;
+        cameraRig.transform.position = 
+            baseLink.transform.position
+            + 0.3f*baseLink.transform.up 
+            //- 0.04f*baseLink.transform.right 
+            + difference;
 	}
 
     //convert ROS position to Unity Position

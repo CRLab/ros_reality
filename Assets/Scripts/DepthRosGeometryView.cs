@@ -2,6 +2,8 @@
 using System.Collections;
 using System;
 
+
+[RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
 public class DepthRosGeometryView : MonoBehaviour {
 
     private WebsocketClient wsc;
@@ -19,22 +21,43 @@ public class DepthRosGeometryView : MonoBehaviour {
     int width = 512;
     int height = 424;
 
+    private Mesh mesh;
+    int numPoints = 60000;
+
     Matrix4x4 m;
 
     // Use this for initialization
     void Start() {
-        // Create a texture for the depth image and color image
-        depthTexture = new Texture2D(width, height, TextureFormat.R16, false);
-        colorTexture = new Texture2D(2, 2);
-
+        mesh = new Mesh();
+        GetComponent<MeshFilter>().mesh = mesh;
+        CreateMesh();
 
         wsc = GameObject.Find("WebsocketClient").GetComponent<WebsocketClient>();
-        depthTopic = "kinect2/sd/image_depth_rect_throttle";
-        colorTopic = "kinect2/sd/image_color_rect/compressed_throttle";
-        wsc.Subscribe(depthTopic, "sensor_msgs/Image", compression, framerate);
-        wsc.Subscribe(colorTopic, "sensor_msgs/CompressedImage", compression, framerate);
+        depthTopic = "/head_camera/depth_downsample/points";
+        //colorTopic = "kinect2/sd/image_color_rect/compressed_throttle";
+        //wsc.Subscribe(depthTopic, "sensor_msgs/PointCloud2", compression, framerate);
+        wsc.Subscribe(depthTopic, "sensor_msgs/PointCloud2", 0);
+        //wsc.Subscribe(colorTopic, "sensor_msgs/CompressedImage", compression, framerate);
         InvokeRepeating("UpdateTexture", 0.1f, 0.1f);
     }
+
+    void CreateMesh() {
+        System.Random rand = new System.Random(DateTime.Now.Millisecond);
+        Vector3[] points = new Vector3[numPoints];
+        int[] indecies = new int[numPoints];
+        Color[] colors = new Color[numPoints];
+
+        for (int i = 0; i < points.Length; ++i) {
+            points[i] = new Vector3(rand.Next(-10, 10), rand.Next(-10, 10), rand.Next(-10, 10));
+            indecies[i] = i;
+            colors[i] = new Color(0f, 1f, 0f, 1.0f);
+        }
+
+        mesh.vertices = points;
+        mesh.colors = colors;
+        mesh.SetIndices(indecies, MeshTopology.Points, 0);
+    }
+
 
     // Update is called once per frame
     void UpdateTexture() {
@@ -44,9 +67,10 @@ public class DepthRosGeometryView : MonoBehaviour {
             depthMessage = wsc.messages[depthTopic];
             byte[] depthImage = System.Convert.FromBase64String(depthMessage);
 
-            depthTexture.LoadRawTextureData(depthImage);
+
+            //depthTexture.LoadRawTextureData(depthImage);
             //depthTexture.LoadImage(depthImage);
-            depthTexture.Apply();
+            //depthTexture.Apply();
             //Debug.Log(depthTexture.GetType());
 
         }
@@ -54,27 +78,15 @@ public class DepthRosGeometryView : MonoBehaviour {
             Debug.Log(e.ToString());
         }
 
-        try {
-            colorMessage = wsc.messages[colorTopic];
-            byte[] colorImage = System.Convert.FromBase64String(colorMessage);
-            colorTexture.LoadImage(colorImage);
-            colorTexture.Apply();
-        }
-        catch (Exception e) {
-            Debug.Log(e.ToString());
-            return;
-        }
-    }
-
-    void OnRenderObject() {
-
-        Material.SetTexture("_MainTex", depthTexture);
-        Material.SetTexture("_ColorTex", colorTexture);
-        Material.SetPass(0);
-
-        m = Matrix4x4.TRS(this.transform.position, this.transform.rotation, this.transform.localScale);
-        Material.SetMatrix("transformationMatrix", m);
-
-        Graphics.DrawProcedural(MeshTopology.Points, 512 * 424, 1);
+        //try {
+        //    colorMessage = wsc.messages[colorTopic];
+        //    byte[] colorImage = System.Convert.FromBase64String(colorMessage);
+        //    colorTexture.LoadImage(colorImage);
+        //    colorTexture.Apply();
+        //}
+        //catch (Exception e) {
+        //    Debug.Log(e.ToString());
+        //    return;
+        //}
     }
 }
