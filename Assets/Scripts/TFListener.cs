@@ -7,6 +7,7 @@ public class TFListener : MonoBehaviour
 	private WebsocketClient wsc;
 
     public GameObject cameraRig;
+    public Transform pointCloud;
     public GameObject headCam;
     public string topic = "ros_unity";
 
@@ -61,6 +62,12 @@ public class TFListener : MonoBehaviour
                     cur.transform.position = scale * RosToUnityPositionAxisConversion(curPos); //convert ROS coordinates to Unity coordinates and scale for position vector
                     cur.transform.rotation = RosToUnityQuaternionConversion(curRot); //convert ROS quaternions to Unity quarternions
                     cur.transform.localScale = new Vector3(scale, scale, scale);
+
+                    // setup point cloud base position
+                    if (cur.name == "head_camera_linkPivot") {
+                        pointCloud.position = cur.transform.position;
+                        pointCloud.rotation = cur.transform.rotation;
+                    }
 
 				} else {
 					cur.transform.localScale = new Vector3(-scale, scale, -scale);

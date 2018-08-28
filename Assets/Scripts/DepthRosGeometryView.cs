@@ -1,92 +1,97 @@
 ﻿using UnityEngine;
 using System.Collections;
 using System;
+using Newtonsoft.Json;
 
 
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
 public class DepthRosGeometryView : MonoBehaviour {
 
     private WebsocketClient wsc;
-    string depthTopic;
+
+    public bool active = false;
+    string depthTopic = "head_camera/depth_downsample/points";
     string colorTopic;
-    int framerate = 100;
-    public string compression = "none"; //"png" is the other option, haven't tried it yet though
-    string depthMessage;
-    string colorMessage;
-
-    public Material Material;
-    Texture2D depthTexture;
-    Texture2D colorTexture;
-
-    int width = 512;
-    int height = 424;
+    TFListener tfListener;
+    float scale;
+    //int framerate = 100;
+    //public string compression = "none"; //"png" is the other option, haven't tried it yet though
 
     private Mesh mesh;
-    int numPoints = 60000;
+    //int numPoints = 60000;
 
     Matrix4x4 m;
 
     // Use this for initialization
     void Start() {
-        mesh = new Mesh();
-        GetComponent<MeshFilter>().mesh = mesh;
-        CreateMesh();
+        if (!active) return;
 
+        tfListener = GameObject.Find("TFListener").GetComponent<TFListener>();
         wsc = GameObject.Find("WebsocketClient").GetComponent<WebsocketClient>();
-        depthTopic = "/head_camera/depth_downsample/points";
         //colorTopic = "kinect2/sd/image_color_rect/compressed_throttle";
         //wsc.Subscribe(depthTopic, "sensor_msgs/PointCloud2", compression, framerate);
-        wsc.Subscribe(depthTopic, "sensor_msgs/PointCloud2", 0);
+        wsc.Subscribe(depthTopic, "sensor_msgs/PointCloud2", 1000*2*2*2);
         //wsc.Subscribe(colorTopic, "sensor_msgs/CompressedImage", compression, framerate);
-        InvokeRepeating("UpdateTexture", 0.1f, 0.1f);
+        InvokeRepeating("UpdateTexture", 0.1f, 2f);
     }
-
-    void CreateMesh() {
-        System.Random rand = new System.Random(DateTime.Now.Millisecond);
-        Vector3[] points = new Vector3[numPoints];
-        int[] indecies = new int[numPoints];
-        Color[] colors = new Color[numPoints];
-
-        for (int i = 0; i < points.Length; ++i) {
-            points[i] = new Vector3(rand.Next(-10, 10), rand.Next(-10, 10), rand.Next(-10, 10));
-            indecies[i] = i;
-            colors[i] = new Color(0f, 1f, 0f, 1.0f);
-        }
-
-        mesh.vertices = points;
-        mesh.colors = colors;
-        mesh.SetIndices(indecies, MeshTopology.Points, 0);
-    }
-
 
     // Update is called once per frame
     void UpdateTexture() {
-        try {
-            if (!wsc.messages.ContainsKey(depthTopic)) return;
+        if (!wsc.messages.ContainsKey(depthTopic)) return;
 
-            depthMessage = wsc.messages[depthTopic];
-            byte[] depthImage = System.Convert.FromBase64String(depthMessage);
+        scale = tfListener.scale;
 
+        // reset mesh
+        mesh = new Mesh();
+        GetComponent<MeshFilter>().mesh = mesh;
 
-            //depthTexture.LoadRawTextureData(depthImage);
-            //depthTexture.LoadImage(depthImage);
-            //depthTexture.Apply();
-            //Debug.Log(depthTexture.GetType());
+        // Get pointcloud message
+        String depthMessage = wsc.messages[depthTopic];
+        PointCloudMsg pc = JsonConvert.DeserializeObject<PointCloud>(depthMessage).msg;
 
+        // Init offset values
+        int xOffset = 0, yOffset = 0, zOffset = 0;
+        foreach (PointField field in pc.fields) {
+            switch (field.name) {
+                case "x": xOffset = field.offset; break;
+                case "y": yOffset = field.offset; break;
+                case "z": zOffset = field.offset; break;
+            }
         }
-        catch (Exception e) {
-            Debug.Log(e.ToString());
+
+        // init arrays
+        int numPoints = pc.data.Length / pc.point_step;
+        Vector3[] points = new Vector3[numPoints];
+        int[] indices = new int[numPoints];
+        Color[] colors = new Color[numPoints];
+
+        // get each 3D point
+        for (int i = 0; i < pc.data.Length; i += pc.point_step) {
+            float x = BitConverter.ToSingle(pc.data, i + xOffset);
+            float y = BitConverter.ToSingle(pc.data, i + yOffset);
+            float z = BitConverter.ToSingle(pc.data, i + zOffset);
+
+            int index = i / pc.point_step;
+            points[index] = RosToUnityPositionAxisConversion(new Vector3(x, y, z)) / scale;
+            indices[index] = index;
+            colors[index] = new Color(0f, 1f, 0f, 1.0f);
         }
 
-        //try {
-        //    colorMessage = wsc.messages[colorTopic];
-        //    byte[] colorImage = System.Convert.FromBase64String(colorMessage);
-        //    colorTexture.LoadImage(colorImage);
-        //    colorTexture.Apply();
-        //}
-        //catch (Exception e) {
-        //    Debug.Log(e.ToString());
-        //    return;
-        //}
+        // assign points and colors to mesh
+        mesh.vertices = points;
+        mesh.colors = colors;
+        mesh.SetIndices(indices, MeshTopology.Points, 0);
     }
+
+    //convert ROS position to Unity Position
+    Vector3 RosToUnityPositionAxisConversion(Vector3 rosIn) {
+        //return new Vector3(-rosIn.x, rosIn.z, -rosIn.y);
+
+        Vector3 pos = new Vector3(-rosIn.x, rosIn.z, -rosIn.y);
+        Vector3 newPos = Quaternion.Euler(0, 90, 0) * pos;
+        return Quaternion.Euler(0, 0, 90) * newPos;
+
+        //return rosIn;
+    }
+
 }

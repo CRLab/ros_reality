@@ -5,12 +5,11 @@ public class ArmController : MonoBehaviour {
     public string arm;
 
     public GameObject laserPrefab;
+    public GameObject headCam;
 
     private GameObject laser;
     private Vector3 laserHitPoint;
 
-    private string grip_label;
-    private string trigger_label;
     //websocket client connected to ROS network
     private WebsocketClient wsc;
     TFListener TFListener;
@@ -20,8 +19,9 @@ public class ArmController : MonoBehaviour {
     SteamVR_TrackedObject trackedObj;
     SteamVR_Controller.Device device;
 
-    bool gripperClosed = false;
-    bool moveMessageReady = true;   // move message is ready to be sent
+    bool[] triggerDown = { false, false };  // { left, right }
+    bool moveReady = true;
+    bool gripperOpen = true;
 
     void Awake() {
         trackedObj = GetComponent<SteamVR_TrackedObject>();
@@ -34,6 +34,45 @@ public class ArmController : MonoBehaviour {
     private void Update() {
         scale = TFListener.scale;
 
+        // left grip cancel move
+        if (arm == "left") {
+            handleLeft();
+        }
+        else if (arm == "right") {
+            handleRight();
+        }
+    }
+
+    void handleLeft() {
+
+        // cancel movement on grip press
+        if (device.GetPressDown(SteamVR_Controller.ButtonMask.Grip)) {
+            wsc.SendEinMessage("cancelMove");
+            return;
+        }
+
+        // orient robot to head cam
+        if (!triggerDown[0] && device.GetHairTriggerDown()) {
+            triggerDown[0] = true;
+
+            Quaternion outQuat = UnityToRosRotationAxisConversion(headCam.GetComponent<Transform>().rotation);
+            outQuat *= Quaternion.Euler(0, 90, 0);
+
+            string msg = 
+                "rotateTo^" +
+                outQuat.x + "," + outQuat.y + "," + outQuat.z + "," + outQuat.w;
+            wsc.SendEinMessage(msg);
+            return;
+        }
+
+        // Reset trigger variables
+        if (device.GetHairTriggerUp()) {
+            triggerDown[0] = false;
+        }
+    }
+
+    void handleRight() {
+
         // Touchpad press shows the laser pointer
         if (device.GetPress(SteamVR_Controller.ButtonMask.Touchpad)) {
             RaycastHit hit;
@@ -41,45 +80,46 @@ public class ArmController : MonoBehaviour {
                 laserHitPoint = hit.point;
                 ShowLaser(hit);
             }
-        } else {
+        }
+        else {
             laser.SetActive(false);
         }
 
-        // cancel move actions on grip press
+        // Move robot arm to controller position (right controller) or cancel all movement (left controller)
         if (device.GetPressDown(SteamVR_Controller.ButtonMask.Grip)) {
-            Vector3 outPos = UnityToRosPositionAxisConversion(GetComponent<Transform>().position) / scale;
-            Quaternion outQuat = UnityToRosRotationAxisConversion(GetComponent<Transform>().rotation);
-            wsc.SendEinMessage(
-                "moveGripper^" + 
-                outPos.x + "," + outPos.y + "," + outPos.z
-                + "^" + outQuat.x + "," + outQuat.y + "," + outQuat.z + "," + outQuat.w);
-            //wsc.SendEinMessage("cancelMove");
-            return;
+                Vector3 outPos = UnityToRosPositionAxisConversion(GetComponent<Transform>().position) / scale;
+                Quaternion outQuat = UnityToRosRotationAxisConversion(GetComponent<Transform>().rotation);
+
+                wsc.SendEinMessage(
+                    "moveGripper^" +
+                    outPos.x + "," + outPos.y + "," + outPos.z
+                    + "^" + outQuat.x + "," + outQuat.y + "," + outQuat.z + "," + outQuat.w);
+                return; 
         }
 
         // close gripper on trigger press
-        if (device.GetHairTriggerDown()) {
-            gripperClosed = true;
+        if (!triggerDown[1] && device.GetHairTriggerDown()) {
+            triggerDown[1] = true;
 
             if (!laser.activeSelf) {
-                wsc.SendEinMessage("closeGripper");
+                string msg = !gripperOpen ? "openGripper" : "closeGripper";
+                gripperOpen = !gripperOpen;
+                wsc.SendEinMessage(msg);
+                return;
             }
         }
 
-        // open gripper on trigger relsease
+        // Reset trigger variables
         if (device.GetHairTriggerUp()) {
-            gripperClosed = false;
-            moveMessageReady = true;
-
-            if (!laser.activeSelf) {
-                wsc.SendEinMessage("openGripper");
-            }
+            triggerDown[1] = false;
+            moveReady = true;
         }
 
         // move to a point on trigger and touchpad press
-        if (laser.activeSelf && gripperClosed && moveMessageReady) {
+        if (laser.activeSelf && triggerDown[1] && moveReady) {
             wsc.SendEinMessage("moveTo^" + (-laserHitPoint.x).ToString() + "," + (-laserHitPoint.z).ToString());
-            moveMessageReady = false;
+            moveReady = false;
+            return;
         }
     }
 
@@ -97,17 +137,6 @@ public class ArmController : MonoBehaviour {
         wsc.Advertise("forth_commands", "std_msgs/String");
         // Asychrononously call sendControls every .1 seconds
         // InvokeRepeating("SendControls", .1f, .1f);
-
-        if (arm == "left") {
-            grip_label = "Left Grip";
-            trigger_label = "Left Trigger";
-        }
-        else if (arm == "right") {
-            grip_label = "Right Grip";
-            trigger_label = "Right Trigger";
-        }
-        else
-            Debug.LogError("arm variable is not set correctly");
     }
 
     private void ShowLaser(RaycastHit hit) {
