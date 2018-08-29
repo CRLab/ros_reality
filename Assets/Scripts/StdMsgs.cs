@@ -22,3 +22,14 @@ public class PointField {
     public byte datatype { get; set; }
     public int count { get; set; }
 }
+
+
+
+
+public class TF {
+    public TFMsg msg { get; set; }
+}
+
+public class TFMsg {
+    public string data { get; set; }
+}

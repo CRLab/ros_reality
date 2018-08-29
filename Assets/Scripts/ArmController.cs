@@ -126,6 +126,7 @@ public class ArmController : MonoBehaviour {
     void Start() {
         // init laser
         laser = Instantiate(laserPrefab);
+        laser.SetActive(false);
 
         // Get the live websocket client
         wsc = GameObject.Find("WebsocketClient").GetComponent<WebsocketClient>();

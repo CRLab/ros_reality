@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using System;
 using System.Collections;
+using Newtonsoft.Json;
 
 public class TFListener : MonoBehaviour
 {
@@ -24,38 +25,39 @@ public class TFListener : MonoBehaviour
         if (!wsc.messages.ContainsKey(topic)) return; 
 
 		string message = wsc.messages[topic]; //get newest robot state data (from transform)
-		string[] tfElements = message.Split (';'); //split the message into each joint/link data pair
+        TFMsg pc = JsonConvert.DeserializeObject<TF>(message).msg;
+        string[] tfElements = pc.data.Split(';'); //split the message into each joint/link data pair
 
         foreach (string tfElement in tfElements) {
             //Debug.Log(tfElement);
             //continue;
-			string[] dataPair = tfElement.Split (':');
-			GameObject cur = GameObject.Find (dataPair [0] + "Pivot"); // replace with hashmap
-			if (cur != null) {
+            string[] dataPair = tfElement.Split(':');
+            GameObject cur = GameObject.Find(dataPair[0] + "Pivot"); // replace with hashmap
+            if (cur != null) {
 
-				string[] tmp = dataPair [1].Split ('^'); //seperate position from rotation data
-				string pos = tmp [0]; //position data
-				string rot = tmp [1]; //rotation data
-				pos = pos.Substring (1, pos.Length - 2);
-				rot = rot.Substring (1, rot.Length - 2);
-                string[] poses = pos.Split (',');
-				float pos_x = float.Parse (poses [0]); //x position
-				float pos_y = float.Parse (poses [1]); //y position
-				float pos_z = float.Parse (poses [2]); //z position
+                string[] tmp = dataPair[1].Split('^'); //seperate position from rotation data
+                string pos = tmp[0]; //position data
+                string rot = tmp[1]; //rotation data
+                pos = pos.Substring(1, pos.Length - 2);
+                rot = rot.Substring(1, rot.Length - 2);
+                string[] poses = pos.Split(',');
+                float pos_x = float.Parse(poses[0]); //x position
+                float pos_y = float.Parse(poses[1]); //y position
+                float pos_z = float.Parse(poses[2]); //z position
 
 
-                Vector3 curPos = new Vector3 (pos_x, pos_y, pos_z); //save current position
-				string[] rots = rot.Split (',');
+                Vector3 curPos = new Vector3(pos_x, pos_y, pos_z); //save current position
+                string[] rots = rot.Split(',');
                 //save rotation as quaternions
-				float rot_x = float.Parse (rots [0]); 
-				float rot_y = float.Parse (rots [1]);
-				float rot_z = float.Parse (rots [2]);
-				float rot_w = float.Parse (rots [3]);
+                float rot_x = float.Parse(rots[0]);
+                float rot_y = float.Parse(rots[1]);
+                float rot_z = float.Parse(rots[2]);
+                float rot_w = float.Parse(rots[3]);
 
 
-				Quaternion curRot = new Quaternion (rot_x, rot_y, rot_z, rot_w);
+                Quaternion curRot = new Quaternion(rot_x, rot_y, rot_z, rot_w);
 
-				if (!cur.name.Contains("kinect")) { //rescaling direction of kinect point cloud
+                if (!cur.name.Contains("kinect")) { //rescaling direction of kinect point cloud
                     //cur.transform.position = Vector3.Lerp(scale * RosToUnityPositionAxisConversion(curPos), cur.transform.position, 0.7f); //convert ROS coordinates to Unity coordinates and scale for position vector
                     //cur.transform.rotation = Quaternion.Slerp(RosToUnityQuaternionConversion(curRot), cur.transform.rotation, 0.7f); //convert ROS quaternions to Unity quarternions
 
@@ -69,23 +71,27 @@ public class TFListener : MonoBehaviour
                         pointCloud.rotation = cur.transform.rotation;
                     }
 
-				} else {
-					cur.transform.localScale = new Vector3(-scale, scale, -scale);
-				}
-				//cur.transform.position = RosToUnityPositionAxisConversion (curPos);
-				//cur.transform.rotation = RosToUnityQuaternionConversion (curRot);
-			}
-		}
+                }
+                else {
+                    cur.transform.localScale = new Vector3(-scale, scale, -scale);
+                }
+                //cur.transform.position = RosToUnityPositionAxisConversion (curPos);
+                //cur.transform.rotation = RosToUnityQuaternionConversion (curRot);
 
-        // attach head cam to robot
-        GameObject baseLink = GameObject.Find("head_tilt_linkPivot");
-        Vector3 difference = cameraRig.transform.position - headCam.transform.position;
-        //difference.y = 0;
-        cameraRig.transform.position = 
-            baseLink.transform.position
-            + 0.3f*baseLink.transform.up 
-            //- 0.04f*baseLink.transform.right 
-            + difference;
+                // deactivate head mesh so that it doesnt interfere with head cam view
+                if (cur.name.Contains("head")) {
+                    if (cur.name == "head_tilt_linkPivot") {
+
+                        // attach head cam to robot
+                        Vector3 difference = cameraRig.transform.position - headCam.transform.position;
+                        cameraRig.transform.position = cur.transform.transform.position + difference;
+                    }
+
+                    MeshRenderer rend = cur.GetComponentInChildren<MeshRenderer>();
+                    if (rend) rend.enabled = false;
+                }
+            }
+        }
 	}
 
     //convert ROS position to Unity Position

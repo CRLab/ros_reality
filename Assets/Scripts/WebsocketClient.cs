@@ -22,7 +22,7 @@ public class WebsocketClient : MonoBehaviour {
         ws.OnClose += OnCloseHandler;
 
         Debug.Log("Connecting to websocket");
-        ws.ConnectAsync();
+        ws.Connect();
     }
 
     void OnApplicationQuit() {
