@@ -49,6 +49,9 @@ public class URDFParser : MonoBehaviour {
             origin.transform.localEulerAngles = RosToUnityRotationAxisConversion(pair.Value.getRpy());
 
             pivot.transform.SetParent(root.transform);
+            //Debug.Log("Updating Link transforms!!!!!!!!!!");
+            //Debug.Log(origin.transform.localPosition);
+
         }
 
         // Destroy any additional cameras that were created

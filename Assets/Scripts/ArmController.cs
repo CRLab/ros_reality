@@ -1,9 +1,11 @@
 ﻿using UnityEngine;
+using UnityEngine.UI;
 
 public class ArmController : MonoBehaviour {
     // string of which arm to control. Valid values are "left" and "right"
     public string arm;
 
+    public Text frameText;
     public GameObject laserPrefab;
     public GameObject headCam;
 
@@ -22,9 +24,33 @@ public class ArmController : MonoBehaviour {
     bool[] triggerDown = { false, false };  // { left, right }
     bool moveReady = true;
     bool gripperOpen = true;
+    bool leftTouchpadPressed = false;
+
+    private enum Frame { Base=0, Head };    // frame of rotation for robot
+    private string[] frameStrings = { "base", "head"};
+    private Frame currFrame = Frame.Base;
 
     void Awake() {
         trackedObj = GetComponent<SteamVR_TrackedObject>();
+    }
+
+    void Start() {
+        setCurrentFrame(currFrame);
+
+        // init laser
+        laser = Instantiate(laserPrefab);
+        laser.SetActive(false);
+
+        // Get the live websocket client
+        wsc = GameObject.Find("WebsocketClient").GetComponent<WebsocketClient>();
+
+        // Get the live TFListener
+        TFListener = GameObject.Find("TFListener").GetComponent<TFListener>();
+
+        // Create publisher to the Baxter's arm topic (uses Ein)
+        wsc.Advertise("forth_commands", "std_msgs/String");
+        // Asychrononously call sendControls every .1 seconds
+        // InvokeRepeating("SendControls", .1f, .1f);
     }
 
     void FixedUpdate() {
@@ -45,6 +71,17 @@ public class ArmController : MonoBehaviour {
 
     void handleLeft() {
 
+        // Touchpad to toggle through rotation frames
+        if (device.GetPress(SteamVR_Controller.ButtonMask.Touchpad)) {
+            if (!leftTouchpadPressed) {
+                int newIndex = ((int)currFrame + 1) % Frame.GetNames(typeof(Frame)).Length;
+                setCurrentFrame((Frame)newIndex);
+            }
+            leftTouchpadPressed = true;
+        } else {
+            leftTouchpadPressed = false;
+        }
+
         // cancel movement on grip press
         if (device.GetPressDown(SteamVR_Controller.ButtonMask.Grip)) {
             wsc.SendEinMessage("cancelMove");
@@ -55,20 +92,39 @@ public class ArmController : MonoBehaviour {
         if (!triggerDown[0] && device.GetHairTriggerDown()) {
             triggerDown[0] = true;
 
-            Quaternion outQuat = UnityToRosRotationAxisConversion(headCam.GetComponent<Transform>().rotation);
-            outQuat *= Quaternion.Euler(0, 90, 0);
+            // orient the base
+            if (currFrame == Frame.Base) {
+                Quaternion outQuat = UnityToRosRotationAxisConversion(headCam.GetComponent<Transform>().rotation);
+                outQuat *= Quaternion.Euler(0, 90, 0);
 
-            string msg = 
-                "rotateTo^" +
-                outQuat.x + "," + outQuat.y + "," + outQuat.z + "," + outQuat.w;
-            wsc.SendEinMessage(msg);
-            return;
+                string msg =
+                    "rotateTo^" +
+                    outQuat.x + "," + outQuat.y + "," + outQuat.z + "," + outQuat.w;
+                wsc.SendEinMessage(msg);
+                return;
+
+            // orient the head
+            } else if (currFrame == Frame.Head) {
+                Vector3 pos = headCam.transform.position + (headCam.transform.forward * 0.5f);
+                pos = UnityToRosPositionAxisConversion(pos);
+
+                string msg =
+                   "pointHead^" +
+                   pos.x + "," + pos.y + "," + pos.z;
+                wsc.SendEinMessage(msg);
+                return;
+            }
         }
 
         // Reset trigger variables
         if (device.GetHairTriggerUp()) {
             triggerDown[0] = false;
         }
+    }
+
+    void setCurrentFrame(Frame frame) {
+        currFrame = frame;
+        frameText.text = "Rotation frame: " + frameStrings[(int)currFrame];
     }
 
     void handleRight() {
@@ -121,23 +177,6 @@ public class ArmController : MonoBehaviour {
             moveReady = false;
             return;
         }
-    }
-
-    void Start() {
-        // init laser
-        laser = Instantiate(laserPrefab);
-        laser.SetActive(false);
-
-        // Get the live websocket client
-        wsc = GameObject.Find("WebsocketClient").GetComponent<WebsocketClient>();
-
-        // Get the live TFListener
-        TFListener = GameObject.Find("TFListener").GetComponent<TFListener>();
-
-        // Create publisher to the Baxter's arm topic (uses Ein)
-        wsc.Advertise("forth_commands", "std_msgs/String");
-        // Asychrononously call sendControls every .1 seconds
-        // InvokeRepeating("SendControls", .1f, .1f);
     }
 
     private void ShowLaser(RaycastHit hit) {

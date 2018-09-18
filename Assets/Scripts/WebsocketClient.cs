@@ -26,7 +26,7 @@ public class WebsocketClient : MonoBehaviour {
     }
 
     void OnApplicationQuit() {
-        ws.CloseAsync();
+        ws.Close();
     }
 
     public void Subscribe(string topic, string type, string compression, int throttle_rate) {
