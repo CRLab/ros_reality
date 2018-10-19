@@ -11,8 +11,9 @@ public class PointCloudParser : MonoBehaviour {
     public bool active = false;
     public GameObject pointCloudPrefab;
 
-    string depthTopic = "head_camera/depth_registered/points";
+    //string depthTopic = "head_camera/depth_registered/points";
     //string depthTopic = "head_camera/depth_downsample/points";
+    string depthTopic = "filtered_pc";
     string colorTopic;
     TFListener tfListener;
     float scale;
@@ -33,6 +34,7 @@ public class PointCloudParser : MonoBehaviour {
 
     // Update is called once per frame
     void UpdateTexture() {
+        Debug.Log("updating the point cloud");
         if (!wsc.messages.ContainsKey(depthTopic)) return;
 
         // REMOVE ME
