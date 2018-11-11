@@ -13,7 +13,7 @@ public class PointCloudParser : MonoBehaviour {
 
     //string depthTopic = "head_camera/depth_registered/points";
     //string depthTopic = "head_camera/depth_downsample/points";
-    string depthTopic = "filtered_pc";
+    string depthTopic = "filtered_pc"; //this is the downsampled data
     string colorTopic;
     TFListener tfListener;
     float scale;
@@ -27,9 +27,15 @@ public class PointCloudParser : MonoBehaviour {
         if (!active) return;
 
         tfListener = GameObject.Find("TFListener").GetComponent<TFListener>();
-        wsc = GameObject.Find("WebsocketClient").GetComponent<WebsocketClient>();
-        wsc.Subscribe(depthTopic, "sensor_msgs/PointCloud2", 1000*2*2*2);
-        InvokeRepeating("UpdateTexture", 0.1f, 5f);
+
+        //connect to the robot directly
+        wsc = GameObject.Find("RobotWebsocketClient").GetComponent<WebsocketClient>();
+
+        //alternatively, connect to the linux server
+        //wsc = GameObject.Find("WebsocketClient").GetComponent<WebsocketClient>();
+
+        wsc.Subscribe(depthTopic, "sensor_msgs/PointCloud2", 500);
+        InvokeRepeating("UpdateTexture", 0.1f, 0.5f);
     }
 
     // Update is called once per frame

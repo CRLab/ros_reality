@@ -33,7 +33,7 @@ public class ArmController : MonoBehaviour {
     private string[] frameStrings = { "base", "head"};
     private Frame currFrame = Frame.Base;
 
-    bool useNavigation = false;//testing parameter, determining the mode
+    bool useNavigation = true;//testing parameter, determining the mode
     bool triggerDownMove = false;
 
     void Awake() {
