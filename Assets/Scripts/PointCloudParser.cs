@@ -6,7 +6,7 @@ using Newtonsoft.Json;
 
 public class PointCloudParser : MonoBehaviour {
 
-    private WebsocketClient wsc;
+    private RobotWebsocketClient wsc;
 
     public bool active = false;
     public GameObject pointCloudPrefab;
@@ -29,19 +29,28 @@ public class PointCloudParser : MonoBehaviour {
         tfListener = GameObject.Find("TFListener").GetComponent<TFListener>();
 
         //connect to the robot directly
-        wsc = GameObject.Find("RobotWebsocketClient").GetComponent<WebsocketClient>();
+        wsc = GameObject.Find("RobotWebsocketClient").GetComponent<RobotWebsocketClient>();
 
-        //alternatively, connect to the linux server
+        //alternatively, connect to the server
         //wsc = GameObject.Find("WebsocketClient").GetComponent<WebsocketClient>();
 
-        wsc.Subscribe(depthTopic, "sensor_msgs/PointCloud2", 500);
+        wsc.Subscribe(depthTopic, "sensor_msgs/PointCloud2", 100);
         InvokeRepeating("UpdateTexture", 0.1f, 0.5f);
     }
 
     // Update is called once per frame
     void UpdateTexture() {
-        Debug.Log("updating the point cloud");
-        if (!wsc.messages.ContainsKey(depthTopic)) return;
+        //Debug.Log("updating the point cloud"+debug);
+        
+        //If using Json
+        if (wsc.connectionType == RobotWebsocketClient.CT.JSON) {
+            
+            if (!wsc.messages.ContainsKey(depthTopic)) return;
+        }
+        //If using Bson
+        else {           
+            if (wsc.pc==null) return;
+        }
 
         // REMOVE ME
         //if (inited) return;
@@ -56,9 +65,18 @@ public class PointCloudParser : MonoBehaviour {
             Destroy(child.gameObject);
         }
 
-        // Get pointcloud message
-        String depthMessage = wsc.messages[depthTopic];
-        PointCloudMsg pc = JsonConvert.DeserializeObject<PointCloud>(depthMessage).msg;
+        PointCloudMsg pc;
+        // Get pointcloud message, using Json
+        if (wsc.connectionType == RobotWebsocketClient.CT.JSON) {
+            String depthMessage = wsc.messages[depthTopic];
+            pc = JsonConvert.DeserializeObject<PointCloud>(depthMessage).msg;
+            
+        }
+        //Get pointcloud message, using Bson
+        else {
+            pc = wsc.pc;
+        }
+            
 
         // Init offset values
         int xOffset = -1, yOffset = -1, zOffset = -1, colorOffset = -1;

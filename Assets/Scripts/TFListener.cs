@@ -11,6 +11,7 @@ public class TFListener : MonoBehaviour
     public Transform pointCloud;
     public GameObject headCam;
     public string topic = "ros_unity";
+    public ArmController ctr;
 
 	public float scale = 1f;
 
@@ -81,10 +82,13 @@ public class TFListener : MonoBehaviour
                 // deactivate head mesh so that it doesnt interfere with head cam view
                 if (cur.name.Contains("head")) {
                     if (cur.name == "head_tilt_linkPivot") {
-
+                        //decides whether the user can move in the space
+                        if (ctr.useNavigation == true) {
+                            Vector3 difference = cameraRig.transform.position - headCam.transform.position;
+                            cameraRig.transform.position = cur.transform.transform.position + difference;
+                        }
                         // attach head cam to robot
-                        Vector3 difference = cameraRig.transform.position - headCam.transform.position;
-                        cameraRig.transform.position = cur.transform.transform.position + difference;
+                        
                     }
 
                     MeshRenderer rend = cur.GetComponentInChildren<MeshRenderer>();

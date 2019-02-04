@@ -33,3 +33,25 @@ public class TF {
 public class TFMsg {
     public string data { get; set; }
 }
+
+public class SubMsg {
+    public string op { get; set; }
+    public string id { get; set; }
+    public string type { get; set; }
+    public string topic { get; set; }
+    public int throttle_rate { get; set; }
+    public int queue_length { get; set; }
+}
+
+public class RecMsg {
+    public string topic { get; set; }
+    public PointCloudMsg msg { get; set; }
+}
+
+public class SocketPointCloud {
+    public SocketPCDMsg msg { get; set; }
+}
+
+public class SocketPCDMsg {
+    public float[] data { get; set; }
+}

@@ -82,3 +82,6 @@ $RECYCLE.BIN/
 
 # Visual Studio cache/options directory
 .vs/
+
+# Data folder
+CSVImage

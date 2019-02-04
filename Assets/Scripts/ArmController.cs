@@ -33,14 +33,12 @@ public class ArmController : MonoBehaviour {
     private string[] frameStrings = { "base", "head"};
     private Frame currFrame = Frame.Base;
 
-    bool useNavigation = true;//testing parameter, determining the mode
-    bool triggerDownMove = false;
+    public bool useNavigation = true;  //determining the mode for the left controller: false means people can walk in the scene, true means people have to stay with the robot
+    bool triggerDownMove = false; //determining if the left controller's trigger is down
 
     void Awake() {
         trackedObj = GetComponent<SteamVR_TrackedObject>();
         baselink = GameObject.Find("base_linkPivot");
-        //should try to store the left and right handles, don't know if is going to succeed
-
     }
 
     void Start() {
@@ -79,6 +77,7 @@ public class ArmController : MonoBehaviour {
         }
     }
     
+    //for the left gripper to control the robot to move
     void CheckMove() {
         if (triggerDownMove) {
             if (device.GetPress(SteamVR_Controller.ButtonMask.Touchpad)) {
@@ -87,7 +86,6 @@ public class ArmController : MonoBehaviour {
                     "directMove^"+axis[1]+","+axis[0];
                 wsc.SendEinMessage(msg);
                 Debug.Log(msg);
-                //Debug.Log(gameObject.name + device.GetAxis());
             }
         }
     }
@@ -100,74 +98,87 @@ public class ArmController : MonoBehaviour {
             wsc.SendEinMessage("cancelMove");
             return;
         }*/
-        //change to navigation mode
+
+
+        //change free walk mode
         if (device.GetPressDown(SteamVR_Controller.ButtonMask.Grip)) {
             useNavigation = !useNavigation;
-            Debug.Log("Navigation: " + useNavigation);
-            //should change the right as well
             return;
         }
 
-        //under navigation mode
-        if (useNavigation) {
-            if (device.GetHairTriggerDown()) {
-                triggerDownMove = true;
-            }
+        if (device.GetHairTriggerDown()) {
+            triggerDownMove = true;
+        }
+
+        if (device.GetHairTriggerUp()) {
+            triggerDownMove = false;
+        }
+        return;
+
+        /********************************************************
+         * **************Move using navigation, might be useful**************
+         * ******************************************************/
+        ////under navigation mode
+        //if (useNavigation) {
+        //    if (device.GetHairTriggerDown()) {
+        //        triggerDownMove = true;
+        //    }
             
-            if (device.GetHairTriggerUp()) {
-                triggerDownMove = false;
-            }
-            return;
-        }
+        //    if (device.GetHairTriggerUp()) {
+        //        triggerDownMove = false;
+        //    }
+        //    return;
+        //}
 
-        //not under navigation mode
-        if (!useNavigation) {
-            // Touchpad to toggle through rotation frames
-            if (device.GetPress(SteamVR_Controller.ButtonMask.Touchpad)) {
-                if (!leftTouchpadPressed) {
-                    int newIndex = ((int)currFrame + 1) % Frame.GetNames(typeof(Frame)).Length;
-                    setCurrentFrame((Frame)newIndex);
-                }
-                leftTouchpadPressed = true;
-            }
-            else {
-                leftTouchpadPressed = false;
-            }
+        ////not under navigation mode
+        //if (!useNavigation) {
 
-            // orient robot to head cam
-            if (!triggerDown[0] && device.GetHairTriggerDown()) {
-                triggerDown[0] = true;
+        //    // Touchpad to toggle through rotation frames
+        //    if (device.GetPress(SteamVR_Controller.ButtonMask.Touchpad)) {
+        //        if (!leftTouchpadPressed) {
+        //            int newIndex = ((int)currFrame + 1) % Frame.GetNames(typeof(Frame)).Length;
+        //            setCurrentFrame((Frame)newIndex);
+        //        }
+        //        leftTouchpadPressed = true;
+        //    }
+        //    else {
+        //        leftTouchpadPressed = false;
+        //    }
 
-                // orient the base
-                if (currFrame == Frame.Base) {
-                    Quaternion outQuat = UnityToRosRotationAxisConversion(headCam.GetComponent<Transform>().rotation);
-                    outQuat *= Quaternion.Euler(0, 90, 0);
+        //    // orient robot to head cam
+        //    if (!triggerDown[0] && device.GetHairTriggerDown()) {
+        //        triggerDown[0] = true;
 
-                    string msg =
-                        "rotateTo^" +
-                        outQuat.x + "," + outQuat.y + "," + outQuat.z + "," + outQuat.w;
-                    wsc.SendEinMessage(msg);
-                    return;
+        //        // orient the base
+        //        if (currFrame == Frame.Base) {
+        //            Quaternion outQuat = UnityToRosRotationAxisConversion(headCam.GetComponent<Transform>().rotation);
+        //            outQuat *= Quaternion.Euler(0, 90, 0);
 
-                    // orient the head
-                }
-                else if (currFrame == Frame.Head) {
-                    Vector3 pos = headCam.transform.position + (headCam.transform.forward * 0.5f);
-                    pos = UnityToRosPositionAxisConversion(pos);
+        //            string msg =
+        //                "rotateTo^" +
+        //                outQuat.x + "," + outQuat.y + "," + outQuat.z + "," + outQuat.w;
+        //            wsc.SendEinMessage(msg);
+        //            return;
 
-                    string msg =
-                       "pointHead^" +
-                       pos.x + "," + pos.y + "," + pos.z;
-                    wsc.SendEinMessage(msg);
-                    return;
-                }
-            }
+        //            // orient the head
+        //        }
+        //        else if (currFrame == Frame.Head) {
+        //            Vector3 pos = headCam.transform.position + (headCam.transform.forward * 0.5f);
+        //            pos = UnityToRosPositionAxisConversion(pos);
 
-            // Reset trigger variables
-            if (device.GetHairTriggerUp()) {
-                triggerDown[0] = false;
-            }
-        }
+        //            string msg =
+        //               "pointHead^" +
+        //               pos.x + "," + pos.y + "," + pos.z;
+        //            wsc.SendEinMessage(msg);
+        //            return;
+        //        }
+        //    }
+
+        //    // Reset trigger variables
+        //    if (device.GetHairTriggerUp()) {
+        //        triggerDown[0] = false;
+        //    }
+        //}
     }
 
     void setCurrentFrame(Frame frame) {
