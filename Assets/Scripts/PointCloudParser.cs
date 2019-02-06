@@ -34,7 +34,7 @@ public class PointCloudParser : MonoBehaviour {
         //alternatively, connect to the server
         //wsc = GameObject.Find("WebsocketClient").GetComponent<WebsocketClient>();
 
-        wsc.Subscribe(depthTopic, "sensor_msgs/PointCloud2", 100);
+        wsc.Subscribe(depthTopic, "sensor_msgs/PointCloud2", 10);
         InvokeRepeating("UpdateTexture", 0.1f, 0.5f);
     }
 
