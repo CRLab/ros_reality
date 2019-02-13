@@ -4,19 +4,29 @@ using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Threading;
+using Newtonsoft.Json.Bson;
+using System.IO;
+using Newtonsoft.Json;
 
 
 public class WebsocketClient : MonoBehaviour {
-
+    public enum CT { BSON, JSON };
+    public Boolean active = true;
     private WebSocket ws;
     private int counter = 1;
     private bool connected = false;
     public Dictionary<string, string> messages = new Dictionary<string, string>();
     public string ip_address;
     private readonly object pcLock = new object();
+    public PointCloudMsg pc;
+    public CT connectionType;
+
+    int debugCount = 0;
 
     // Connect happens in Awake so it is finished before other GameObjects are made
     void Awake() {
+        if (!active)
+            return;
         Debug.Log("instantiating websocket...");
         ws = new WebSocket(ip_address);
 
@@ -29,6 +39,8 @@ public class WebsocketClient : MonoBehaviour {
     }
 
     void OnApplicationQuit() {
+        if (!active)
+            return;
         ws.Close();
     }
 
@@ -40,10 +52,35 @@ public class WebsocketClient : MonoBehaviour {
     }
 
     public void Subscribe(string topic, string type, int throttle_rate) {
-        string msg = "{\"op\":\"subscribe\",\"id\":\"subscribe:/" + topic + ":" + counter + "\",\"type\":\"" + type + "\",\"topic\":\"/" + topic + "\",\"throttle_rate\":" + throttle_rate.ToString() + ",\"queue_length\":0}";
-        Debug.Log(msg);
-        ws.Send(msg);
-        counter++;
+        //subscribe the data in BSON way
+        if (connectionType == CT.BSON) {
+            //create the subscription type
+            SubMsg subm = new SubMsg {
+                op = "subscribe",
+                id = "subscribe:/ " + topic + ":" + counter,
+                type = type,
+                topic = topic,
+                throttle_rate = throttle_rate,
+                queue_length = 0
+            };
+
+            //serialize it to a BSON string
+            MemoryStream ms = new MemoryStream();
+            using (BsonWriter writer = new BsonWriter(ms)) {
+                JsonSerializer serializer = new JsonSerializer();
+                serializer.Serialize(writer, subm);
+            }
+            ws.Send(ms.ToArray());
+            counter++;
+        }
+
+        //subscribe the data in JSON way
+        else {
+            string msg = "{\"op\":\"subscribe\",\"id\":\"subscribe:/" + topic + ":" + counter + "\",\"type\":\"" + type + "\",\"topic\":\"/" + topic + "\",\"throttle_rate\":" + throttle_rate.ToString() + ",\"queue_length\":0}";
+            Debug.Log(msg);
+            ws.Send(msg);
+            counter++;
+        }
     }
 
     public void Unsubscribe(string topic) {
@@ -72,85 +109,44 @@ public class WebsocketClient : MonoBehaviour {
     }
 
     private void OnMessageHandler(object sender, MessageEventArgs e) {
-        /****************************************
-         * *******Current version********
-         * **************************************/
-        string[] input = e.Data.Split(new char[] { ',' }, 2);
-        string topic = input[0].Substring(12).Replace("\"", "");
-        messages[topic] = e.Data;
+        //store data in BSON way
+        if (connectionType == CT.BSON) {
+            //lock to make sure the modification doesn't overlap
+            Debug.Log(debugCount++);
+            //if (Monitor.TryEnter(pcLock)) {
+            //    //deserialize the BSON message and assign it to 
+            //    MemoryStream ms = new MemoryStream(e.RawData);
+            //    RecMsg msg;
+            //    using (BsonReader reader = new BsonReader(ms)) {
+            //        JsonSerializer serializer = new JsonSerializer();
+            //        msg = serializer.Deserialize<RecMsg>(reader);
+            //    }
+            //    //assign it to the pc field
+            //    pc = msg.msg;
+            //    Monitor.Exit(pcLock);
+            //}
+            //else {
+            //    return;
+            //}
+        }
 
-        /****************************************
-         * *******Latest version by David********
-         * **************************************/
-
-        //var sw = System.Diagnostics.Stopwatch.StartNew();
-        //var elapsedMs = sw.ElapsedMilliseconds;
-
-        //Debug.Log("Do nothing in " + elapsedMs + "ms");
-
-        //sw = System.Diagnostics.Stopwatch.StartNew();
-        //int topic_index = 12;
-        //int end_topic_index = topic_index;
-        ////for (end_topic_index = topic_index; e.Data[end_topic_index].Equals("\""); ++end_topic_index) {
-        ////    Debug.Log(e.Data[end_topic_index]);
-        ////}
-        //Debug.Log(end_topic_index);
-        //elapsedMs = sw.ElapsedMilliseconds;
-        //Debug.Log("Get index in " + elapsedMs + "ms");
-        ////char[] topic_arr = new char[end_topic_index - topic_index];
-        ////for(var index = 0; index < topic_arr.Length; ++index) {
-        ////    topic_arr[index] = e.Data[topic_index + index];
-        ////}
-        ////Debug.Log(end_topic_index);
-        //sw = System.Diagnostics.Stopwatch.StartNew();
-        //string topic = e.Data.Substring(topic_index, end_topic_index - 1);
-        ////string topic = new string(topic_arr);
-        //elapsedMs = sw.ElapsedMilliseconds;
-        //Debug.Log("[" + topic + "] Scanned string in " + elapsedMs + "ms");
-
-        //sw = System.Diagnostics.Stopwatch.StartNew();
-        //messages[topic] = e.Data;
-        //elapsedMs = sw.ElapsedMilliseconds;
-        //Debug.Log("[" + topic + "] Store in wsc in " + elapsedMs + "ms");
-        //sw.Stop();
-
-        // Read e.Data as a JSON object
-        // string topic = json_data["topic"];
-        // string data = json_data["msg"];
-        // messages[topic] = data;
-
-        //input[0] is always {"topic": "<topic_name>"
-        // There are 11 characters before topic name
-
-
-        /****************************************
-         * *******Previous versions by David********
-         * **************************************/
-        //@"{\"topic\":\"/(\w+)"
-        //sw = System.Diagnostics.Stopwatch.StartNew();
-        //string pattern = "topic\\\": \\\"/" + @"(\w+)";
-        //Regex regex = new Regex(pattern);
-        //Match match = regex.Match(e.Data);
-        //string topic = match.Groups[1].ToString();
-        //var elapsedMs = sw.ElapsedMilliseconds;
-        //Debug.Log("[" + topic + "] Regex applied in " + elapsedMs + "ms");
-        /*if (match.Success) {
-            Debug.Log("Match: " + match.Value);
-            Debug.Log("topic: " + match.Groups[1]);
-        }*/
-
-        //string[] input = e.Data.Split(new char[] { ',' }, 2);
-        //var elapsedMs = sw.ElapsedMilliseconds;
-        //Debug.Log("First time: " + elapsedMs);
-
-        //string topic = input[0].Substring(12).Replace("\"", "");
-        //elapsedMs = sw.ElapsedMilliseconds - elapsedMs;
-        //Debug.Log("Second time: " + elapsedMs);
-
-        //Debug.Log("Number of strings: " + input.Length);
-        //Debug.Log(input[0]);
-        //Debug.Log(input[1]);
-
+        //store data in Json way
+        else {
+            //lock the variable if topic is cloud point
+            if (Monitor.TryEnter(pcLock)) {
+                string[] input = e.Data.Split(new char[] { ',' }, 2);
+                string topic = input[0].Substring(12).Replace("\"", "");
+                messages[topic] = e.Data;
+                //var elapsedMs = sw.ElapsedMilliseconds;
+                //Debug.Log("Lock and write in " + elapsedMs + "ms");
+                Monitor.Exit(pcLock);
+            }
+            else {
+                //var elapsedMs = sw.ElapsedMilliseconds;
+                //Debug.Log("Unable to lock and exit in " + elapsedMs + "ms");
+                return;
+            }
+        }
 
     }
 

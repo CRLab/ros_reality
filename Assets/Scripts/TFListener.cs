@@ -12,17 +12,22 @@ public class TFListener : MonoBehaviour
     public GameObject headCam;
     public string topic = "ros_unity";
     public ArmController ctr;
+    public Boolean active = true;
 
 	public float scale = 1f;
 
 	// Use this for initialization
 	void Start () {
+        if (!active)
+            return;
         wsc = GameObject.Find("WebsocketClient").GetComponent<WebsocketClient>();
 		wsc.Subscribe (topic, "std_msgs/String", 0);
 	}
 
 	void Update () 
 	{
+        if(!active)
+            return;
         if (!wsc.messages.ContainsKey(topic)) return; 
 
 		string message = wsc.messages[topic]; //get newest robot state data (from transform)

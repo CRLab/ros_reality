@@ -1,6 +1,7 @@
 ﻿/*
 © Siemens AG, 2017-2018
 Author: Dr. Martin Bischoff (martin.bischoff@siemens.com)
+Modified: Jiaheng Hu (jh3916@columbia.edu)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,6 +15,7 @@ limitations under the License.
 */
 
 // this class (System.Net.WebSockets) requires .NET 4.5+ to compile and Windows 8+ to work
+// This defines the WebSocketNet class which offers a websocket using the .NET framework
 
 using System;
 using System.IO;
@@ -30,7 +32,7 @@ namespace NetWebSocketTest {
         private ManualResetEvent IsConnected = new ManualResetEvent(false);
         private AutoResetEvent IsReadyToSend = new AutoResetEvent(true);
 
-        private const int ReceiveChunkSize = 1024;
+        private const int ReceiveChunkSize = 4096;//1024;
         private const int SendChunkSize = 1024;
 
         public event EventHandler OnReceive;
@@ -94,7 +96,7 @@ namespace NetWebSocketTest {
                 int offset = SendChunkSize * i;
                 bool endOfMessage = (i == messageCount - 1);
                 int count = endOfMessage ? message.Length - offset : SendChunkSize;
-                await clientWebSocket.SendAsync(new ArraySegment<byte>(message, offset, count), WebSocketMessageType.Text, endOfMessage, cancellationToken);
+                await clientWebSocket.SendAsync(new ArraySegment<byte>(message, offset, count), WebSocketMessageType.Binary, endOfMessage, cancellationToken);
             }
             IsReadyToSend.Set();
         }

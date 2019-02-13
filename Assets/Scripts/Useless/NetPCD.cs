@@ -21,8 +21,10 @@ public class NetPCD : MonoBehaviour {
     float scale;
 
     string pcdTopic = "chatter";
+    string depthTopic = "head_camera/depth_registered/points";
 
     bool inited = false;
+    int flag = 1;
 
     private int maxPoints = 60000;  // max points allowed in one mesh
 
@@ -33,48 +35,140 @@ public class NetPCD : MonoBehaviour {
         if (!active) return;
         wsc = GameObject.Find("TestNet").GetComponent<NetWebSocket>();
         tfListener = GameObject.Find("TFListener").GetComponent<TFListener>();
-        wsc.Subscribe(pcdTopic, "std_msgs/Float32MultiArray", 100);//unit: milisecond
-        //InvokeRepeating("UpdateTexture", 0f, 3f);
+        //wsc.Subscribe(pcdTopic, "std_msgs/Float32MultiArray", 100);//unit: milisecond
+        wsc.Subscribe(depthTopic, "sensor_msgs/PointCloud2", 200);
+        InvokeRepeating("UpdateTexture", 0f, 0.2f);
     }
+
+    //// Update is called once per frame
+    //void UpdateTexture() {
+    //    if (flag == 2)
+    //        return;
+
+    //    Debug.Log("start");
+    //    if (wsc.pc == null) return;
+    //    flag = 2;
+    //    PointCloudMsg pc = wsc.pc;
+    //    wsc.pc = null;
+
+
+    //    scale = 1;
+
+    //    // reset mesh
+    //    Transform[] allChildren = GetComponentsInChildren<Transform>(true);
+    //    foreach (Transform child in allChildren) {
+    //        if (child.gameObject.GetInstanceID() == gameObject.GetInstanceID()) continue;
+    //        Destroy(child.gameObject);
+    //    }
+
+
+    //    // Init offset values
+    //    int xOffset = -1, yOffset = -1, zOffset = -1, colorOffset = -1;
+    //    foreach (PointField field in pc.fields) {
+    //        switch (field.name) {
+    //            case "x": xOffset = field.offset; break;
+    //            case "y": yOffset = field.offset; break;
+    //            case "z": zOffset = field.offset; break;
+    //            case "rgb": colorOffset = field.offset; break;
+    //        }
+    //    }
+
+    //    // init necessary number of point clouds base on maximum capacity of vertices
+    //    int totalPoints = pc.data.Length / pc.point_step;
+    //    int numPointClouds = (int)(Math.Ceiling(totalPoints / ((double)maxPoints)));
+    //    GameObject[] pointClouds = new GameObject[numPointClouds];
+    //    for (int i = 0; i < pointClouds.Length; i++) {
+    //        GameObject pointCloud = Instantiate(pointCloudPrefab);
+    //        pointCloud.transform.SetParent(transform);
+    //        pointCloud.transform.localRotation = Quaternion.identity;
+    //        pointCloud.transform.localPosition = Vector3.zero;
+    //        pointCloud.GetComponent<MeshFilter>().mesh = new Mesh();
+    //        pointClouds[i] = pointCloud;
+    //    }
+    //    Mesh[] meshs = new Mesh[numPointClouds];
+    //    // process points for each point cloud mesh
+    //    for (int i = 0; i < pointClouds.Length; i++) {
+
+    //        // init arrays
+    //        int numPointsInCloud = i != pointClouds.Length - 1 ? maxPoints : totalPoints % maxPoints;
+    //        Vector3[] points = new Vector3[numPointsInCloud];
+    //        int[] indices = new int[numPointsInCloud];
+    //        Color[] colors = new Color[numPointsInCloud];
+
+    //        int start = i * maxPoints * pc.point_step;  // start offset for this point cloud in the point cloud data array
+    //        int pointIndex = 0;                         // current index of point being processed
+    //        for (int j = start; j < start + numPointsInCloud * pc.point_step; j += pc.point_step) {
+
+    //            //// reverse data chunk base don endiness of client and server
+    //            //if (System.BitConverter.IsLittleEndian == pc.is_bigendian) {
+    //            //    Array.Reverse(pointData);
+    //            //}
+
+    //            // Convert the data chunk into x,y,z, point data
+    //            float x = BitConverter.ToSingle(pc.data, j + xOffset);
+    //            float y = BitConverter.ToSingle(pc.data, j + yOffset);
+    //            float z = BitConverter.ToSingle(pc.data, j + zOffset);
+
+    //            if (float.IsNaN(x) || float.IsNaN(y) || float.IsNaN(z)) continue;
+
+    //            // convert data chunk into color. downsamples topic does not have color data
+    //            byte r = 255, g = 0, b = 0;
+    //            if (colorOffset != -1) {
+    //                b = pc.data[j + colorOffset];
+    //                g = pc.data[j + colorOffset + 1];
+    //                r = pc.data[j + colorOffset + 2];
+    //            }
+
+    //            // store the points and colors
+    //            points[pointIndex] = RosToUnityPositionAxisConversion(new Vector3(x, y, z)) / scale;
+    //            indices[pointIndex] = pointIndex;
+    //            colors[pointIndex] = new Color(r / 255f, g / 255f, b / 255f, 1.0f);
+    //            pointIndex += 1;
+    //        }
+
+    //        // Assign the points and colors to the current point cloud mesh
+    //        Mesh mesh = new Mesh();
+    //        mesh.vertices = points;
+    //        mesh.colors = colors;
+    //        mesh.SetIndices(indices, MeshTopology.Points, 0);
+    //        //pointClouds[i].GetComponent<MeshFilter>().mesh = mesh;
+    //        meshs[i] = mesh;
+    //    }
+
+    //}
 
     // Update is called once per frame
     void UpdateTexture() {
         Debug.Log("start");
-        if (!wsc.messages.ContainsKey(pcdTopic)) return;
+        if (wsc.pc == null) return;
+        PointCloudMsg pc = wsc.pc;
+        wsc.pc = null;
+        Debug.Log("copy pcd!");
 
 
+        scale = 1; //should get the tf reading though
 
-
-        int totalNumField = 6; //total number of field used, x, y, z, r, g, b in this case
-        inited = true;
-        scale = tfListener.scale;
-
-        Debug.Log(0);
         // reset mesh
         Transform[] allChildren = GetComponentsInChildren<Transform>(true);
         foreach (Transform child in allChildren) {
             if (child.gameObject.GetInstanceID() == gameObject.GetInstanceID()) continue;
             Destroy(child.gameObject);
         }
-        Debug.Log(-1);
-        SocketPCDMsg pc;
 
-        var watch = System.Diagnostics.Stopwatch.StartNew();
-        Debug.Log(1);
-        String depthMessage = wsc.messages[pcdTopic];
-        Debug.Log(2);
-        pc = JsonConvert.DeserializeObject<SocketPointCloud>(depthMessage).msg;
-        Debug.Log(3);
 
-        var elapsedMs = watch.ElapsedMilliseconds;
-        var lastStamp = watch.ElapsedMilliseconds;
-        Debug.Log("Json Convert Pointcloud time: " + elapsedMs);
-
-        /*************************************read starting from here**************************************/
-
-        int totalPoints = pc.data.Length / totalNumField;
+        // Init offset values
+        int xOffset = -1, yOffset = -1, zOffset = -1, colorOffset = -1;
+        foreach (PointField field in pc.fields) {
+            switch (field.name) {
+                case "x": xOffset = field.offset; break;
+                case "y": yOffset = field.offset; break;
+                case "z": zOffset = field.offset; break;
+                case "rgb": colorOffset = field.offset; break;
+            }
+        }
 
         // init necessary number of point clouds base on maximum capacity of vertices
+        int totalPoints = pc.data.Length / pc.point_step;
         int numPointClouds = (int)(Math.Ceiling(totalPoints / ((double)maxPoints)));
         GameObject[] pointClouds = new GameObject[numPointClouds];
         for (int i = 0; i < pointClouds.Length; i++) {
@@ -86,49 +180,45 @@ public class NetPCD : MonoBehaviour {
             pointClouds[i] = pointCloud;
         }
 
-        elapsedMs = watch.ElapsedMilliseconds - lastStamp;
-        lastStamp = watch.ElapsedMilliseconds;
-        Debug.Log("Initialize Pointcloud time: " + elapsedMs);
-
-
-        int cur_data_index = -1;
+        // process points for each point cloud mesh
         for (int i = 0; i < pointClouds.Length; i++) {
-            //Debug.Log(1);
+
             // init arrays
             int numPointsInCloud = i != pointClouds.Length - 1 ? maxPoints : totalPoints % maxPoints;
             Vector3[] points = new Vector3[numPointsInCloud];
             int[] indices = new int[numPointsInCloud];
             Color[] colors = new Color[numPointsInCloud];
 
+            int start = i * maxPoints * pc.point_step;  // start offset for this point cloud in the point cloud data array
+            int pointIndex = 0;                         // current index of point being processed
+            for (int j = start; j < start + numPointsInCloud * pc.point_step; j += pc.point_step) {
 
-            float x = 0, y = 0, z = 0;
-            int r = 0, g = 0, b = 0;
-            // current index of point being processed
-            for (int counter = 0; counter < numPointsInCloud * totalNumField; counter++) {
-                //Making empty value as null
-                cur_data_index++;
-                switch (counter % totalNumField) {
-                    case 0: x = pc.data[cur_data_index]; break;
-                    case 1: y = pc.data[cur_data_index]; break;
-                    case 2: z = pc.data[cur_data_index]; break;
-                    case 3: r = (int)pc.data[cur_data_index]; break;
-                    case 4: g = (int)pc.data[cur_data_index]; break;
-                    case 5:
-                        if (float.IsNaN(x) || float.IsNaN(y) || float.IsNaN(z)) break;
-                        b = (int)pc.data[cur_data_index];
-                        int pointIndex = counter / totalNumField;
-                        // store the points and colors
-                        points[pointIndex] = RosToUnityPositionAxisConversion(new Vector3(x, y, z)) / scale;
-                        indices[pointIndex] = pointIndex;
-                        colors[pointIndex] = new Color(r / 255f, g / 255f, b / 255f, 1.0f); //categories[color];
-                        break;
+                //// reverse data chunk base don endiness of client and server
+                //if (System.BitConverter.IsLittleEndian == pc.is_bigendian) {
+                //    Array.Reverse(pointData);
+                //}
+
+                // Convert the data chunk into x,y,z, point data
+                float x = BitConverter.ToSingle(pc.data, j + xOffset);
+                float y = BitConverter.ToSingle(pc.data, j + yOffset);
+                float z = BitConverter.ToSingle(pc.data, j + zOffset);
+
+                if (float.IsNaN(x) || float.IsNaN(y) || float.IsNaN(z)) continue;
+
+                // convert data chunk into color. downsamples topic does not have color data
+                byte r = 255, g = 0, b = 0;
+                if (colorOffset != -1) {
+                    b = pc.data[j + colorOffset];
+                    g = pc.data[j + colorOffset + 1];
+                    r = pc.data[j + colorOffset + 2];
                 }
 
+                // store the points and colors
+                points[pointIndex] = RosToUnityPositionAxisConversion(new Vector3(x, y, z)) / scale;
+                indices[pointIndex] = pointIndex;
+                colors[pointIndex] = new Color(r / 255f, g / 255f, b / 255f, 1.0f);
+                pointIndex += 1;
             }
-
-            elapsedMs = watch.ElapsedMilliseconds - lastStamp;
-            lastStamp = watch.ElapsedMilliseconds;
-            Debug.Log("Setup real Pointcloud time: " + elapsedMs);
 
             // Assign the points and colors to the current point cloud mesh
             Mesh mesh = new Mesh();
@@ -136,7 +226,6 @@ public class NetPCD : MonoBehaviour {
             mesh.colors = colors;
             mesh.SetIndices(indices, MeshTopology.Points, 0);
             pointClouds[i].GetComponent<MeshFilter>().mesh = mesh;
-
         }
 
     }

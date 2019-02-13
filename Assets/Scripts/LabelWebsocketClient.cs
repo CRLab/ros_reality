@@ -7,7 +7,7 @@ using System.Threading;
 
 
 public class LabelWebsocketClient : MonoBehaviour {
-
+    public Boolean active = true;
     private WebSocket ws;
     private int counter = 1;
     private bool connected = false;
@@ -17,6 +17,8 @@ public class LabelWebsocketClient : MonoBehaviour {
 
     // Connect happens in Awake so it is finished before other GameObjects are made
     void Awake() {
+        if (!active)
+            return;
         Debug.Log("instantiating websocket...");
         ws = new WebSocket(ip_address);
 
@@ -26,9 +28,12 @@ public class LabelWebsocketClient : MonoBehaviour {
 
         Debug.Log("Connecting to websocket");
         ws.Connect();
+        ws.Send("HI, I've subscribed");
     }
 
     void OnApplicationQuit() {
+        if (!active)
+            return;
         ws.Close();
     }
 

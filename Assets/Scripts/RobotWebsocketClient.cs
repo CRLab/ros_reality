@@ -11,6 +11,7 @@ using System.IO;
 
 public class RobotWebsocketClient : MonoBehaviour {
     public enum CT { BSON, JSON};
+    public Boolean active = true;
 
     private WebSocket ws;
     private int counter = 1;
@@ -23,6 +24,8 @@ public class RobotWebsocketClient : MonoBehaviour {
 
     // Connect happens in Awake so it is finished before other GameObjects are made
     void Awake() {
+        if(!active)
+            return;
         Debug.Log("instantiating websocket...");
         ws = new WebSocket(ip_address);
 
@@ -35,6 +38,8 @@ public class RobotWebsocketClient : MonoBehaviour {
     }
 
     void OnApplicationQuit() {
+        if (!active)
+            return;
         ws.Close();
     }
 
