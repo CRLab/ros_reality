@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using UnityEngine;
 
 public class PointCloud {
     public PointCloudMsg msg { get; set; }
@@ -24,7 +25,7 @@ public class PointField {
 }
 
 
-
+//For getting pointcloud from image segmentation
 
 public class TF {
     public TFMsg msg { get; set; }
@@ -54,4 +55,25 @@ public class SocketPointCloud {
 
 public class SocketPCDMsg {
     public float[] data { get; set; }
+}
+
+
+//for getting the mesh message
+
+public class MeshObj {
+    public MeshMsg msg { get; set; }
+}
+
+public class MeshMsg {
+    public MeshTriangle[] triangles { get; set; }
+    public Point[] vertices { get; set; }
+}
+ public class MeshTriangle {
+    public int[] vertex_indices { get; set; }
+}
+
+public class Point {
+    public float x { get; set; }
+    public float y { get; set; }
+    public float z { get; set; }
 }

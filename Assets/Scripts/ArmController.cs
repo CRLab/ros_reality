@@ -42,7 +42,7 @@ public class ArmController : MonoBehaviour {
     }
 
     void Start() {
-        setCurrentFrame(currFrame);
+        //setCurrentFrame(currFrame);
 
         // init laser
         laser = Instantiate(laserPrefab);

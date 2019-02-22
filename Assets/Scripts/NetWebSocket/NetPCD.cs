@@ -112,6 +112,8 @@ public class NetPCD : MonoBehaviour {
 
                 // Assign the points and colors to the current point cloud mesh
                 Mesh mesh = new Mesh();
+
+                //at here
                 mesh.vertices = points;
                 mesh.colors = colors;
                 mesh.SetIndices(indices, MeshTopology.Points, 0);

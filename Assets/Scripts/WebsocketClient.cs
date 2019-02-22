@@ -84,7 +84,7 @@ public class WebsocketClient : MonoBehaviour {
     }
 
     public void Unsubscribe(string topic) {
-        string msg = "{\"op\":\"unsubscribe\",\"id\":\"unsubscribe:/" + topic + ":" + counter + "\",\"topic\":\"" + topic + "\"}";
+        string msg = "{\"op\":\"unsubscribe\",\"id\":\"unsubscribe:/" + topic + ":" + counter + "\",\"topic\":\"/" + topic + "\"}";
         Debug.Log(msg);
         ws.SendAsync(msg, OnSendComplete);
     }
@@ -138,7 +138,7 @@ public class WebsocketClient : MonoBehaviour {
                 string topic = input[0].Substring(12).Replace("\"", "");
                 messages[topic] = e.Data;
                 //var elapsedMs = sw.ElapsedMilliseconds;
-                //Debug.Log("Lock and write in " + elapsedMs + "ms");
+                //Debug.Log("New Message"+topic);
                 Monitor.Exit(pcLock);
             }
             else {
