@@ -36,9 +36,14 @@ public class ArmController : MonoBehaviour {
     public bool useNavigation = true;  //determining the mode for the left controller: false means people can walk in the scene, true means people have to stay with the robot
     bool triggerDownMove = false; //determining if the left controller's trigger is down
 
+    public GameObject buttonParent;
+    public bool buttonEnabled;
+
     void Awake() {
         trackedObj = GetComponent<SteamVR_TrackedObject>();
         baselink = GameObject.Find("base_linkPivot");
+        buttonParent.SetActive(false);
+        buttonEnabled = false;
     }
 
     void Start() {
@@ -58,7 +63,10 @@ public class ArmController : MonoBehaviour {
         wsc.Advertise("forth_commands", "std_msgs/String");
         // Asychrononously call sendControls every .1 seconds
         // InvokeRepeating("SendControls", .1f, .1f);
-        InvokeRepeating("CheckMove", .1f, .1f);
+        if(arm == "left") {
+            InvokeRepeating("CheckMove", .1f, .1f);
+        }
+        
     }
 
     void FixedUpdate() {
@@ -107,6 +115,17 @@ public class ArmController : MonoBehaviour {
         }
 
         if (device.GetHairTriggerDown()) {
+            //show the button
+            if (!device.GetPress(SteamVR_Controller.ButtonMask.Touchpad)) {
+                if(buttonEnabled == false) {
+                    buttonParent.SetActive(true);
+                    buttonEnabled = true;
+                }
+                else {
+                    buttonParent.SetActive(false);
+                    buttonEnabled = false;
+                }
+            }
             triggerDownMove = true;
         }
 
