@@ -13,6 +13,7 @@ public class TFListener : MonoBehaviour
     public string topic = "ros_unity";
     public ArmController ctr;
     public Boolean active = true;
+    public MeshObjectParser meshparser;
 
 	public float scale = 1f;
 
@@ -75,6 +76,7 @@ public class TFListener : MonoBehaviour
                     if (cur.name == "head_camera_linkPivot") {
                         pointCloud.position = cur.transform.position;
                         pointCloud.rotation = cur.transform.rotation;
+                        //cameraRig.transform.rotation = cur.transform.rotation;
                     }
 
                 }
@@ -86,7 +88,7 @@ public class TFListener : MonoBehaviour
 
                 // deactivate head mesh so that it doesnt interfere with head cam view
                 if (cur.name.Contains("head")) {
-                    if (cur.name == "head_tilt_linkPivot") {
+                    if (cur.name == "head_tilt_linkPivot") {                       
                         //decides whether the user can move in the space
                         if (ctr.useNavigation == true) {
                             Vector3 difference = cameraRig.transform.position - headCam.transform.position;

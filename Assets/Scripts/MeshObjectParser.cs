@@ -18,6 +18,8 @@ public class MeshObjectParser : MonoBehaviour {
     TFListener tfListener;
     float scale;
 
+    public bool scanMode = false;
+
     private int maxPoints = 60000;  // max points allowed in one mesh
 
     // Use this for initialization
@@ -110,6 +112,7 @@ public class MeshObjectParser : MonoBehaviour {
         mesh.triangles = triangleList;
 
         Mesh.GetComponent<MeshFilter>().mesh = mesh;
+        Mesh.GetComponent<MeshCollider>().sharedMesh = mesh;
 
         Debug.Log("Finish creating the object");
 

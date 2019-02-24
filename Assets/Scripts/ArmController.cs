@@ -11,6 +11,7 @@ public class ArmController : MonoBehaviour {
     public GameObject baselink;
     public GameObject leftHandle;
     public GameObject rightHandle;
+    public GameObject selectedObject;
 
     private GameObject laser;
     private Vector3 laserHitPoint;
@@ -39,6 +40,8 @@ public class ArmController : MonoBehaviour {
     public GameObject buttonParent;
     public bool buttonEnabled;
 
+    //int count = 0;
+
     void Awake() {
         trackedObj = GetComponent<SteamVR_TrackedObject>();
         baselink = GameObject.Find("base_linkPivot");
@@ -59,6 +62,8 @@ public class ArmController : MonoBehaviour {
         // Get the live TFListener
         TFListener = GameObject.Find("TFListener").GetComponent<TFListener>();
 
+
+        //Is this still usefull?
         // Create publisher to the Baxter's arm topic (uses Ein)
         wsc.Advertise("forth_commands", "std_msgs/String");
         // Asychrononously call sendControls every .1 seconds
@@ -217,18 +222,28 @@ public class ArmController : MonoBehaviour {
     }
 
     void handleRight() {
-
+        //Debug.Log("handle right "+count);
         // Touchpad press shows the laser pointer
         if (device.GetPress(SteamVR_Controller.ButtonMask.Touchpad)) {
             RaycastHit hit;
-            if (Physics.Raycast(trackedObj.transform.position, transform.forward, out hit, 100)) {
+            //Debug.Log("Entering " + count);
+            if (Physics.Raycast(trackedObj.transform.position, transform.forward, out hit)) {
+                //Debug.Log("HIT! "+count);
                 laserHitPoint = hit.point;
                 ShowLaser(hit);
+                //Debug.Log("Shown!" + count);
+
+                //testing changing color of the object
+                GameObject hitObject = hit.transform.gameObject;
+                if(hitObject.tag != "Plane")
+                    selectObject(hitObject);
             }
         }
         else {
             laser.SetActive(false);
+            //Debug.Log("not pressed");
         }
+        //count++;
 
         // Move robot arm to controller position (right controller) or cancel all movement (left controller)
         if (device.GetPressDown(SteamVR_Controller.ButtonMask.Grip)) {
@@ -275,6 +290,27 @@ public class ArmController : MonoBehaviour {
         laser.transform.position = Vector3.Lerp(trackedObj.transform.position, laserHitPoint, .5f);
         laser.transform.LookAt(laserHitPoint);
         laser.transform.localScale = new Vector3(laser.transform.localScale.x, laser.transform.localScale.y, hit.distance);
+    }
+
+    void selectObject(GameObject obj) {
+        if (selectedObject != null) {
+            if(obj == selectedObject) {
+                return;
+            }
+            ClearSelection();
+            
+        }
+        selectedObject = obj;
+        Renderer[] rs = selectedObject.GetComponentsInChildren<Renderer>();
+        foreach(Renderer r in rs) {
+            Material m = r.material;
+            m.color = Color.green;
+            r.material = m;
+        }
+    }
+
+    void ClearSelection() {
+        selectedObject = null;
     }
 
     //Convert 3D Unity position to ROS position 

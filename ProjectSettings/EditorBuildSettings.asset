@@ -9,6 +9,6 @@ EditorBuildSettings:
     path: Assets/Scenes/PositionControl.unity
     guid: 1c5af20a8210acd4b9f4fdb03549c25c
   - enabled: 0
-    path: 
-    guid: 00000000000000000000000000000000
+    path: Assets/Scenes/LoadingScene.unity
+    guid: 864bc4845d7b413429a774b4f756da8c
   m_configObjects: {}
