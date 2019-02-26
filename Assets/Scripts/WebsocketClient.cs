@@ -140,13 +140,14 @@ public class WebsocketClient : MonoBehaviour {
 
         //store data in Json way
         else {
+
             //lock the variable if topic is cloud point
             if (Monitor.TryEnter(pcLock)) {
                 string[] input = e.Data.Split(new char[] { ',' }, 2);
                 string topic = input[0].Substring(12).Replace("\"", "");
                 messages[topic] = e.Data;
                 //var elapsedMs = sw.ElapsedMilliseconds;
-                //Debug.Log("New Message"+topic);
+                Debug.Log("New Message: "+ e.Data);
                 Monitor.Exit(pcLock);
             }
             else {

@@ -61,7 +61,11 @@ public class SocketPCDMsg {
 //for getting the mesh message
 
 public class MeshObj {
-    public MeshMsg msg { get; set; }
+    public MeshMsgList msg { get; set; }
+}
+
+public class MeshMsgList {
+    public MeshMsg[] meshes { get; set; }
 }
 
 public class MeshMsg {

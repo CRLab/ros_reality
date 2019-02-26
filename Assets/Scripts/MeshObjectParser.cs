@@ -22,6 +22,9 @@ public class MeshObjectParser : MonoBehaviour {
     public bool scanMode = false;
 
     private int maxPoints = 60000;  // max points allowed in one mesh
+    //we probably don't want several mesh object for the same object. When that happens, maybe just clip the object
+
+    private GameObject[] mesh_list; //the mesh list for determining the index of the selected mesh
 
     // Use this for initialization
     void Start() {
@@ -43,7 +46,7 @@ public class MeshObjectParser : MonoBehaviour {
     }
 
     public void getMesh() {
-        wsc.Subscribe(meshTopic, "shape_msgs/Mesh", 10);
+        wsc.Subscribe(meshTopic, "msg/MeshArray", 10);
         StartCoroutine("createMesh");
     }
 
@@ -65,71 +68,85 @@ public class MeshObjectParser : MonoBehaviour {
 
         scale = tfListener.scale;
 
-        //think about when you actually distroy them
-        //this should get called when the action is actually executed
+        
 
-        // reset mesh
-        Transform[] allChildren = GetComponentsInChildren<Transform>(true);
-        foreach (Transform child in allChildren) {
-            if (child.gameObject.GetInstanceID() == gameObject.GetInstanceID()) continue;
-            Destroy(child.gameObject);
-        }
-
-        MeshMsg meshmsg;
+        MeshMsg[] meshmsg;
         // Get mesh message, using Json
         String meshMessage = wsc.messages[meshTopic];
         wsc.messages.Remove(meshTopic);
-        meshmsg = JsonConvert.DeserializeObject<MeshObj>(meshMessage).msg;
+        meshmsg = JsonConvert.DeserializeObject<MeshObj>(meshMessage).msg.meshes;
         Debug.Log("successfully get the mesh!");
 
-        //checking total number of vertices is probably not necessary?
+        int totalNumMeshes = meshmsg.Length;
+        mesh_list = new GameObject[totalNumMeshes];
+
+        for (int k = 0; k < totalNumMeshes; k++) {
+            int totalPoints = meshmsg[k].vertices.Length;
+            //Debug.Log(totalPoints);
+            //int numMeshes = (int)(Math.Ceiling(totalPoints / ((double)maxPoints)));
+            //GameObject[] Meshes = new GameObject[numMeshes];
+            //for (int i = 0; i < numMeshes; i++) {}
+
+            mesh_list[k] = Instantiate(MeshPrefab);
+            mesh_list[k].transform.SetParent(transform);
+            mesh_list[k].transform.localRotation = Quaternion.identity;
+            mesh_list[k].transform.localPosition = Vector3.zero;
+
+            Mesh mesh = new Mesh(); //hopefully there's no problem with this
+
+            Vector3[] vertexList = new Vector3[totalPoints];
+            for (int i = 0; i < totalPoints; i++) {
+                vertexList[i] = RosToUnityPositionAxisConversion(new Vector3(meshmsg[k].vertices[i].x, meshmsg[k].vertices[i].y, meshmsg[k].vertices[i].z)) / scale;
+            }
+            mesh.vertices = vertexList;
+            //Debug.Log(vertexList[0]);
+
+            int totalTriangles = meshmsg[k].triangles.Length;
+            int[] triangleList = new int[3 * totalTriangles];
+            for (int i = 0; i < totalTriangles; i++) {
+                triangleList[i * 3] = meshmsg[k].triangles[i].vertex_indices[0];
+                triangleList[i * 3 + 1] = meshmsg[k].triangles[i].vertex_indices[1];
+                triangleList[i * 3 + 2] = meshmsg[k].triangles[i].vertex_indices[2];
+            }
+
+
+            //Debug.Log(triangleList[0]);
+            mesh.triangles = triangleList;
+
+            mesh_list[k].GetComponent<MeshFilter>().mesh = mesh;
+            mesh_list[k].GetComponent<MeshCollider>().sharedMesh = mesh;
+            yield return null;
+        }
         
-        int totalPoints = meshmsg.vertices.Length;
-        //Debug.Log(totalPoints);
-        //int numMeshes = (int)(Math.Ceiling(totalPoints / ((double)maxPoints)));
-        //GameObject[] Meshes = new GameObject[numMeshes];
-        //for (int i = 0; i < numMeshes; i++) {}
-
-        GameObject Mesh = Instantiate(MeshPrefab);
-        Mesh.transform.SetParent(transform);
-        Mesh.transform.localRotation = Quaternion.identity;
-        Mesh.transform.localPosition = Vector3.zero;
-
-        Mesh mesh = new Mesh();
-
-        Vector3[] vertexList = new Vector3[totalPoints];
-        for (int i = 0; i< totalPoints; i++) {
-            vertexList[i] = RosToUnityPositionAxisConversion(new Vector3(meshmsg.vertices[i].x, meshmsg.vertices[i].y, meshmsg.vertices[i].z))/scale;
-        }
-        mesh.vertices = vertexList;
-        //Debug.Log(vertexList[0]);
-
-        int totalTriangles = meshmsg.triangles.Length;
-        int[]triangleList = new int[3 * totalTriangles];
-        for (int i = 0; i< totalTriangles; i++) {
-            triangleList[i * 3] = meshmsg.triangles[i].vertex_indices[0];
-            triangleList[i * 3 + 1] = meshmsg.triangles[i].vertex_indices[1];
-            triangleList[i * 3 + 2] = meshmsg.triangles[i].vertex_indices[2];
-        }
-        //Debug.Log(triangleList[0]);
-        mesh.triangles = triangleList;
-
-        Mesh.GetComponent<MeshFilter>().mesh = mesh;
-        Mesh.GetComponent<MeshCollider>().sharedMesh = mesh;
 
         Debug.Log("Finish creating the object");
-
-        //create a dictionary for the mesh -> index
-
+        
         //next step is to select the object and plan grasp
         while (!armComtroller.selectedObject) {
             yield return null;
         }
-        int indexVal = 1;//dict(armComtroller.selectedObject)
+
+        //call the service which returns the planned grasp
+        int indexVal = Array.IndexOf(mesh_list, armComtroller.selectedObject);//this won't work if changed color? maybe it will still work
         wsc.CallService("plan_grasp", "index", indexVal.ToString());
 
+        //The grasp is planned, now subsribe to a new topic and get the pose of the robot (something similar to the TFListener)
+        //display the gesture and allow the user to choose whether to accept the grasp or not
         //subscribe and wait
+
+        //For now, let's just assume that the user always
         wsc.CallService("execute_grasp", "exe", "true");
+
+        
+        //think about when you actually distroy them
+        //this should get called when the action is actually executed
+        // reset mesh
+
+        //Transform[] allChildren = GetComponentsInChildren<Transform>(true);
+        //foreach (Transform child in allChildren) {
+        //    if (child.gameObject.GetInstanceID() == gameObject.GetInstanceID()) continue;
+        //    Destroy(child.gameObject);
+        //}
 
     }
 
