@@ -10,6 +10,7 @@ public class MeshObjectParser : MonoBehaviour {
     private WebsocketClient wsc;
     public bool active = false;
     public GameObject MeshPrefab;
+    public ArmController armComtroller;
 
     //string depthTopic = "head_camera/depth_registered/points";
     string meshTopic = "test_mesh";
@@ -65,6 +66,8 @@ public class MeshObjectParser : MonoBehaviour {
         scale = tfListener.scale;
 
         //think about when you actually distroy them
+        //this should get called when the action is actually executed
+
         // reset mesh
         Transform[] allChildren = GetComponentsInChildren<Transform>(true);
         foreach (Transform child in allChildren) {
@@ -115,6 +118,18 @@ public class MeshObjectParser : MonoBehaviour {
         Mesh.GetComponent<MeshCollider>().sharedMesh = mesh;
 
         Debug.Log("Finish creating the object");
+
+        //create a dictionary for the mesh -> index
+
+        //next step is to select the object and plan grasp
+        while (!armComtroller.selectedObject) {
+            yield return null;
+        }
+        int indexVal = 1;//dict(armComtroller.selectedObject)
+        wsc.CallService("plan_grasp", "index", indexVal.ToString());
+
+        //subscribe and wait
+        wsc.CallService("execute_grasp", "exe", "true");
 
     }
 

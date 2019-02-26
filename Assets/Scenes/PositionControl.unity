@@ -1922,6 +1922,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   active: 1
   MeshPrefab: {fileID: 1520806855725252, guid: 80f1f3ffc671a3c45a947d4f4529083a, type: 2}
+  armComtroller: {fileID: 140406381}
   scanMode: 0
 --- !u!4 &1129587997
 Transform:
@@ -3287,6 +3288,7 @@ MonoBehaviour:
   ButtonParent: {fileID: 1350128687}
   LeftController: {fileID: 140406365}
   canvas: {fileID: 112341920}
+  meshParser: {fileID: 1129587996}
 --- !u!1001 &2097549094
 Prefab:
   m_ObjectHideFlags: 0

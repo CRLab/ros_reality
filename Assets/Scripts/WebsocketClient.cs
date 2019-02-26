@@ -97,6 +97,14 @@ public class WebsocketClient : MonoBehaviour {
 
     }
 
+    public void CallService(string service, string argsName, string argsVal) {
+        string msg = "{\"service\":\""+service+"\",\"args\":{\""+argsName+"\":"+argsVal+"}," +
+                            "\"fragment_size\":2147483647,\"compression\":\"none\",\"op\":\"call_service\",\"id\":\"callService\"}";
+        Debug.Log(msg);
+        //ws.SendAsync(msg, OnSendComplete);
+        counter++;
+    }
+
     public void Publish(string topic, string message) {
         string msg = "{\"op\":\"publish\",\"id\":\"publish:/" + topic + ":" + counter + "\",\"topic\":\"/" + topic + "\",\"msg\":{\"data\":\"" + message + "\"},\"latch\":false}";
         ws.SendAsync(msg, OnSendComplete);

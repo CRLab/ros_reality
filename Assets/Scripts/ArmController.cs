@@ -307,6 +307,8 @@ public class ArmController : MonoBehaviour {
             m.color = Color.green;
             r.material = m;
         }
+
+        //send the information to the server, reset everything, set the pointcloud active (the real set Active), let the server plan the grasp
     }
 
     void ClearSelection() {
