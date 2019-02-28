@@ -81,3 +81,23 @@ public class Point {
     public float y { get; set; }
     public float z { get; set; }
 }
+
+public class ExeServiceMsg {
+    public ExeVal values { get; set; }
+    public bool result { get; set; }
+}
+
+public class ExeVal {
+    public string error_msg { get; set; }
+    public bool success { get; set; }
+}
+
+public class PlanServiceMsg {
+    public PlanVal values { get; set; }
+    public bool result { get; set; }
+}
+
+public class PlanVal {
+    //planned_grasp_state:{name, position}
+    public bool success { get; set; }
+}

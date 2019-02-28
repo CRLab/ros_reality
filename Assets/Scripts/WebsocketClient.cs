@@ -7,6 +7,7 @@ using System.Threading;
 using Newtonsoft.Json.Bson;
 using System.IO;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 
 public class WebsocketClient : MonoBehaviour {
@@ -16,6 +17,7 @@ public class WebsocketClient : MonoBehaviour {
     private int counter = 1;
     private bool connected = false;
     public Dictionary<string, string> messages = new Dictionary<string, string>();
+    public Dictionary<string, string> services = new Dictionary<string, string>();
     public string ip_address;
     private readonly object pcLock = new object();
     public PointCloudMsg pc;
@@ -97,11 +99,19 @@ public class WebsocketClient : MonoBehaviour {
 
     }
 
-    public void CallService(string service, string argsName, string argsVal) {
-        string msg = "{\"service\":\""+service+"\",\"args\":{\""+argsName+"\":"+argsVal+"}," +
-                            "\"fragment_size\":2147483647,\"compression\":\"none\",\"op\":\"call_service\",\"id\":\"callService\"}";
+    //this function is currently just for calling a service with a single argument
+    public void CallService(string service, string[] argsName, string[] argsVal, string id) {
+        string msg = "{\"service\":\"" + service + "\",\"args\":{";
+        for (int i = 0; i < argsName.Length; i++) {
+            msg += "\"" + argsName[i] + "\":" + argsVal[i];
+            if(i!= argsName.Length - 1) {
+                msg += ",";
+            }
+        }
+
+        msg+= "},\"fragment_size\":2147483647,\"compression\":\"none\",\"op\":\"call_service\",\"id\":\"" + id + "\"}";
         Debug.Log(msg);
-        //ws.SendAsync(msg, OnSendComplete);
+        ws.SendAsync(msg, OnSendComplete);
         counter++;
     }
 
@@ -139,22 +149,66 @@ public class WebsocketClient : MonoBehaviour {
         }
 
         //store data in Json way
-        else {
 
-            //lock the variable if topic is cloud point
-            if (Monitor.TryEnter(pcLock)) {
-                string[] input = e.Data.Split(new char[] { ',' }, 2);
-                string topic = input[0].Substring(12).Replace("\"", "");
-                messages[topic] = e.Data;
-                //var elapsedMs = sw.ElapsedMilliseconds;
-                Debug.Log("New Message: "+ e.Data);
-                Monitor.Exit(pcLock);
+        //figure out the type of all this
+        //write out how to handle the service response
+        else {
+            string[] input = e.Data.Split(new char[] { ',' });
+            
+            string op = input[input.Length-1].Substring(8).Replace("\"", "").Replace("}","");
+            //Debug.Log("op is: " + op);
+
+
+            switch (op) {
+                case "publish": {
+                        string topic = input[0].Substring(12).Replace("\"", "");
+                        messages[topic] = e.Data;
+                        //Debug.Log("New Message: " + e.Data);
+                        return;
+                    }
+                case "service_response": {
+                        string service = input[input.Length - 2].Substring(12).Replace("\"", "");
+                        //in the values field
+                        //Debug.Log("service is: " + service);
+                        //Debug.Log(e.Data);
+                        services[service] = e.Data;
+                        return;
+
+                    }
             }
-            else {
-                //var elapsedMs = sw.ElapsedMilliseconds;
-                //Debug.Log("Unable to lock and exit in " + elapsedMs + "ms");
-                return;
-            }
+
+            //JObject jObject = JsonConvert.DeserializeObject<JObject>(e.Data);
+            //switch (jObject.GetValue("op").ToString()) {
+            //    case "publish": {
+            //            string topic = jObject.GetValue("topic").ToString();
+            //            //messages[topic] = e.Data;
+            //            //Debug.Log("New Message: " + e.Data);
+            //            messages[topic] = jObject.GetValue("msg").ToString();
+            //            return;
+            //        }
+            //    case "service_response": {
+            //            return;
+
+            //        }
+            //}
+
+            //var elapsedMs = sw.ElapsedMilliseconds;
+
+
+            ////lock the variable if topic is cloud point
+            //if (Monitor.TryEnter(pcLock)) {
+            //    string[] input = e.Data.Split(new char[] { ',' }, 2);
+            //    string topic = input[0].Substring(12).Replace("\"", "");
+            //    messages[topic] = e.Data;
+            //    //var elapsedMs = sw.ElapsedMilliseconds;
+            //    Debug.Log("New Message: "+ e.Data);
+            //    Monitor.Exit(pcLock);
+            //}
+            //else {
+            //    //var elapsedMs = sw.ElapsedMilliseconds;
+            //    //Debug.Log("Unable to lock and exit in " + elapsedMs + "ms");
+            //    return;
+            //}
         }
 
     }

@@ -25,12 +25,12 @@ public class ButtonHandlerScan : MonoBehaviour {
             //SceneManager.LoadScene("LoadingScene");
             if (canvas.activeSelf)
                 return;
-            canvas.SetActive(true);
+            
             ButtonParent.SetActive(false);
             LeftController.GetComponent<ArmController>().buttonEnabled = false;
             //*****************send command to the wsc
             //call service
-            meshParser.getMesh();
+            meshParser.StartScanSystem();
             //StartCoroutine("createMesh"); in meshObjectParser
         }
     }
