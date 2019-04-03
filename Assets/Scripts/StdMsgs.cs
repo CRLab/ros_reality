@@ -64,6 +64,14 @@ public class MeshObj {
     public MeshMsgList msg { get; set; }
 }
 
+public class MeshService {
+    public MeshService_child values { get; set; }
+}
+
+public class MeshService_child {
+    public MeshMsgList mesh_array { get; set; }
+}
+
 public class MeshMsgList {
     public MeshMsg[] meshes { get; set; }
 }

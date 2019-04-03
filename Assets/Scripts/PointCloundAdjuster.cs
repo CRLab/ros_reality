@@ -12,6 +12,7 @@ public class PointCloundAdjuster : MonoBehaviour {
 
 	void Start () {
         UpdateLastPose();
+        //Debug.Log("I'm getting called!");
     }
 	
 	void Update () {

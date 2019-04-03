@@ -14,7 +14,7 @@ public class TFListener : MonoBehaviour
     public ArmController ctr;
     public Boolean active = true;
     public MeshObjectParser meshparser;
-
+    public Transform meshObjects;
 	public float scale = 1f;
 
 	// Use this for initialization
@@ -76,6 +76,8 @@ public class TFListener : MonoBehaviour
                     if (cur.name == "head_camera_linkPivot") {
                         pointCloud.position = cur.transform.position;
                         pointCloud.rotation = cur.transform.rotation;
+                        meshObjects.position = cur.transform.position;
+                        meshObjects.rotation = cur.transform.rotation;
                         //cameraRig.transform.rotation = cur.transform.rotation;
                     }
 

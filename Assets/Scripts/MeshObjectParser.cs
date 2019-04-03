@@ -14,10 +14,11 @@ public class MeshObjectParser : MonoBehaviour {
     public GameObject canvas;
 
     //string depthTopic = "head_camera/depth_registered/points";
-    string meshTopic = "completed_meshes";
+    string meshTopic = "completions";
     //string depthTopic = "filtered_pc"; //this is the downsampled data
     string planService = "plan_grasp";
     string exeService = "execute_grasp";
+    string meshService = "completions";
     string colorTopic;
     TFListener tfListener;
     float scale;
@@ -26,6 +27,7 @@ public class MeshObjectParser : MonoBehaviour {
 
     private int maxPoints = 60000;  // max points allowed in one mesh
     //we probably don't want several mesh object for the same object. When that happens, maybe just clip the object
+    Color[] categories = { Color.black, Color.red, Color.green, Color.blue, Color.cyan, Color.yellow, new Color(1f, 0f, 1f, 1f), new Color(0f, 0f, 188f / 255f, 1f) };
 
     private GameObject[] mesh_list; //the mesh list for determining the index of the selected mesh
 
@@ -50,33 +52,50 @@ public class MeshObjectParser : MonoBehaviour {
 
     public void StartScanSystem() {
         canvas.SetActive(true);
-        wsc.Subscribe(meshTopic, "ros_reality_bridge/MeshArray", 10);
+        //wsc.Subscribe(meshTopic, "ros_reality_bridge/MeshArray", 10);
+        wsc.CallService(meshService, new string[0], new string[0], meshService);
         StartCoroutine("createMesh");
     }
     
     IEnumerator createMesh() {
-        
-        //If using Json
-        if (wsc.connectionType == WebsocketClient.CT.JSON) {
-            while (!wsc.messages.ContainsKey(meshTopic)) {
-                //Debug.Log("No Message");
-                yield return new WaitForSeconds(0.1f);
-            }
+
+        //this is when we are using subscribe
+        ////If using Json
+        //if (wsc.connectionType == WebsocketClient.CT.JSON) {
+        //    while (!wsc.messages.ContainsKey(meshTopic)) {
+        //        //Debug.Log("No Message");
+        //        yield return new WaitForSeconds(0.1f);
+        //    }
+        //}
+
+        ////We don't need the information anymore once we already have them
+        //wsc.Unsubscribe(meshTopic);
+
+        //scale = tfListener.scale;
+
+        //MeshMsg[] meshmsg;
+        //// Get mesh message, using Json
+        //String meshMessage = wsc.messages[meshTopic];
+        //wsc.messages.Remove(meshTopic);
+        //meshmsg = JsonConvert.DeserializeObject<MeshObj>(meshMessage).msg.meshes;
+        //Debug.Log("successfully get the mesh!");
+
+
+        while (!wsc.services.ContainsKey(meshService)) {
+            Debug.Log("service result haven't been returned");
+            yield return null;
         }
-
-        //We don't need the information anymore once we already have them
-        wsc.Unsubscribe(meshTopic);
-
+        string mesh_message = wsc.services[meshService];
+        wsc.services.Remove(meshService);
+        Debug.Log(mesh_message);
+        //parse and use it first
+        MeshService mesh_result = JsonConvert.DeserializeObject<MeshService>(mesh_message);
 
         scale = tfListener.scale;
 
-        
-
         MeshMsg[] meshmsg;
         // Get mesh message, using Json
-        String meshMessage = wsc.messages[meshTopic];
-        wsc.messages.Remove(meshTopic);
-        meshmsg = JsonConvert.DeserializeObject<MeshObj>(meshMessage).msg.meshes;
+        meshmsg = mesh_result.values.mesh_array.meshes;
         Debug.Log("successfully get the mesh!");
 
         int totalNumMeshes = meshmsg.Length;
@@ -115,6 +134,14 @@ public class MeshObjectParser : MonoBehaviour {
             //Debug.Log(triangleList[0]);
             mesh.triangles = triangleList;
 
+
+            Renderer[] rs = mesh_list[k].GetComponentsInChildren<Renderer>();
+            foreach (Renderer r in rs) {
+                Material m = r.material;
+                m.color = categories[k % categories.Length];
+                r.material = m;
+            }
+
             mesh_list[k].GetComponent<MeshFilter>().mesh = mesh;
             mesh_list[k].GetComponent<MeshCollider>().sharedMesh = mesh;
             yield return null;
@@ -128,10 +155,20 @@ public class MeshObjectParser : MonoBehaviour {
         while (!armComtroller.selectedObject) {
             yield return null;
         }
-        armComtroller.selectedObject = null;//maybe do this later?
+        
 
         //call the service which returns the planned grasp
-        int indexVal = Array.IndexOf(mesh_list, armComtroller.selectedObject);//this won't work if changed color? maybe it will still work
+        int indexVal = Array.IndexOf(mesh_list, armComtroller.selectedObject);
+
+        Debug.Log("objetc selected: " + indexVal);
+        
+        armComtroller.selectedObject = null;//maybe do this later?
+
+        //###################what is happening previously?
+        //for testing
+        destroy_mesh();
+        yield break;
+
         wsc.CallService(planService, new[] { "mesh_index" }, new[] { indexVal.ToString() }, planService);
 
         while(!wsc.services.ContainsKey(planService)) {
