@@ -76,9 +76,16 @@ public class TFListener : MonoBehaviour
                     if (cur.name == "head_camera_linkPivot") {
                         pointCloud.position = cur.transform.position;
                         pointCloud.rotation = cur.transform.rotation;
+                        //meshObjects.position = cur.transform.position;
+                        //meshObjects.rotation = cur.transform.rotation;
+                        //cameraRig.transform.rotation = cur.transform.rotation;
+                    }
+
+                    //potentially, set the meshobjectpose to baselink
+                    if (cur.name == "base_linkPivot") {
+                        //Debug.Log("changing cords to baselink");
                         meshObjects.position = cur.transform.position;
                         meshObjects.rotation = cur.transform.rotation;
-                        //cameraRig.transform.rotation = cur.transform.rotation;
                     }
 
                 }

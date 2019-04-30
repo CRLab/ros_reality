@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
+using System.Collections.Generic;
 
 public class ArmController : MonoBehaviour {
     // string of which arm to control. Valid values are "left" and "right"
@@ -39,8 +40,11 @@ public class ArmController : MonoBehaviour {
 
     public GameObject buttonParent;
     public bool buttonEnabled;
-
+    public bool selection_checked;
+    public bool wait_for_execute;
+    public bool execte_grasp;
     //int count = 0;
+    private Color cur_color;
 
     void Awake() {
         trackedObj = GetComponent<SteamVR_TrackedObject>();
@@ -247,42 +251,61 @@ public class ArmController : MonoBehaviour {
 
         // Move robot arm to controller position (right controller) or cancel all movement (left controller)
         if (device.GetPressDown(SteamVR_Controller.ButtonMask.Grip)) {
+
+            //first, check if the grasp is true
+            if (wait_for_execute) {
+                execte_grasp = false;
+                wait_for_execute = false;
+            }
+
+            else {
                 Vector3 outPos = UnityToRosPositionAxisConversion(getRelativePosition(baselink.transform, GetComponent<Transform>().position)) / scale;
                 Quaternion outQuat = UnityToRosRotationAxisConversion(GetComponent<Transform>().rotation);
 
+                wsc.SendEinMessage(
+                        "moveGripper^" +
+                        outPos.x + "," + outPos.y + "," + outPos.z
+                        + "^" + outQuat.x + "," + outQuat.y + "," + outQuat.z + "," + outQuat.w);
+            }
 
-
-            wsc.SendEinMessage(
-                    "moveGripper^" +
-                    outPos.x + "," + outPos.y + "," + outPos.z
-                    + "^" + outQuat.x + "," + outQuat.y + "," + outQuat.z + "," + outQuat.w);
-                return; 
+            return; 
         }
 
         // close gripper on trigger press
-        if (!triggerDown[1] && device.GetHairTriggerDown()) {
-            triggerDown[1] = true;
+        if (device.GetHairTriggerDown()) {
 
-            if (!laser.activeSelf) {
+            //first, check if the machine is waiting for trigger
+            if (wait_for_execute) {
+                execte_grasp = true;
+                wait_for_execute = false;
+            }
+
+            //next, check if the laser is up, if not, perform a grip
+            else if (!laser.activeSelf) {
                 string msg = !gripperOpen ? "openGripper" : "closeGripper";
                 gripperOpen = !gripperOpen;
                 wsc.SendEinMessage(msg);
                 return;
             }
+ 
+            //if the object is selected, pick the object
+            else if(selectedObject) {
+                selection_checked = true;
+            }
+
         }
 
-        // Reset trigger variables
-        if (device.GetHairTriggerUp()) {
-            triggerDown[1] = false;
-            moveReady = true;
-        }
+        //// Reset trigger variables
+        //if (device.GetHairTriggerUp()) {
+        //    moveReady = true;
+        //}
 
-        // move to a point on trigger and touchpad press
-        if (laser.activeSelf && triggerDown[1] && moveReady) {
-            wsc.SendEinMessage("moveTo^" + (-laserHitPoint.x).ToString() + "," + (-laserHitPoint.z).ToString());
-            moveReady = false;
-            return;
-        }
+        //// move to a point on trigger and touchpad press
+        //if (laser.activeSelf && triggerDown[1] && moveReady) {
+        //    wsc.SendEinMessage("moveTo^" + (-laserHitPoint.x).ToString() + "," + (-laserHitPoint.z).ToString());
+        //    moveReady = false;
+        //    return;
+        //}
     }
 
     private void ShowLaser(RaycastHit hit) {
@@ -298,10 +321,10 @@ public class ArmController : MonoBehaviour {
                 return;
             }
             ClearSelection();
-            
         }
         selectedObject = obj;
         Renderer[] rs = selectedObject.GetComponentsInChildren<Renderer>();
+        cur_color = rs[0].material.color;
         foreach(Renderer r in rs) {
             Material m = r.material;
             m.color = Color.green;
@@ -312,7 +335,17 @@ public class ArmController : MonoBehaviour {
     }
 
     void ClearSelection() {
+        if (selectedObject) {
+            Renderer[] rs = selectedObject.GetComponentsInChildren<Renderer>();
+            foreach (Renderer r in rs) {
+                Material m = r.material;
+                m.color = cur_color;
+                r.material = m;
+            }
+        }
+        
         selectedObject = null;
+
     }
 
     //Convert 3D Unity position to ROS position 

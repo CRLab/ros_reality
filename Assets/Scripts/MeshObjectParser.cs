@@ -10,7 +10,7 @@ public class MeshObjectParser : MonoBehaviour {
     private WebsocketClient wsc;
     public bool active = false;
     public GameObject MeshPrefab;
-    public ArmController armComtroller;
+    public ArmController armController;
     public GameObject canvas;
 
     //string depthTopic = "head_camera/depth_registered/points";
@@ -27,7 +27,7 @@ public class MeshObjectParser : MonoBehaviour {
 
     private int maxPoints = 60000;  // max points allowed in one mesh
     //we probably don't want several mesh object for the same object. When that happens, maybe just clip the object
-    Color[] categories = { Color.black, Color.red, Color.green, Color.blue, Color.cyan, Color.yellow, new Color(1f, 0f, 1f, 1f), new Color(0f, 0f, 188f / 255f, 1f) };
+    Color[] categories = { Color.red, Color.blue, Color.cyan, Color.yellow, Color.black, new Color(1f, 0f, 1f, 1f), new Color(0f, 0f, 188f / 255f, 1f) };
 
     private GameObject[] mesh_list; //the mesh list for determining the index of the selected mesh
 
@@ -59,30 +59,9 @@ public class MeshObjectParser : MonoBehaviour {
     
     IEnumerator createMesh() {
 
-        //this is when we are using subscribe
-        ////If using Json
-        //if (wsc.connectionType == WebsocketClient.CT.JSON) {
-        //    while (!wsc.messages.ContainsKey(meshTopic)) {
-        //        //Debug.Log("No Message");
-        //        yield return new WaitForSeconds(0.1f);
-        //    }
-        //}
-
-        ////We don't need the information anymore once we already have them
-        //wsc.Unsubscribe(meshTopic);
-
-        //scale = tfListener.scale;
-
-        //MeshMsg[] meshmsg;
-        //// Get mesh message, using Json
-        //String meshMessage = wsc.messages[meshTopic];
-        //wsc.messages.Remove(meshTopic);
-        //meshmsg = JsonConvert.DeserializeObject<MeshObj>(meshMessage).msg.meshes;
-        //Debug.Log("successfully get the mesh!");
-
 
         while (!wsc.services.ContainsKey(meshService)) {
-            Debug.Log("service result haven't been returned");
+            //Debug.Log("service result haven't been returned");
             yield return null;
         }
         string mesh_message = wsc.services[meshService];
@@ -152,22 +131,24 @@ public class MeshObjectParser : MonoBehaviour {
         canvas.SetActive(false);
 
         //next step is to select the object and plan grasp
-        while (!armComtroller.selectedObject) {
+        while (!armController.selection_checked) {
             yield return null;
         }
-        
+
+        armController.selection_checked = false;
 
         //call the service which returns the planned grasp
-        int indexVal = Array.IndexOf(mesh_list, armComtroller.selectedObject);
+        int indexVal = Array.IndexOf(mesh_list, armController.selectedObject);
 
         Debug.Log("objetc selected: " + indexVal);
         
-        armComtroller.selectedObject = null;//maybe do this later?
+        armController.selectedObject = null;//maybe do this later?
 
-        //###################what is happening previously?
-        //for testing
-        destroy_mesh();
-        yield break;
+
+        //destroy_mesh();
+
+        canvas.SetActive(true);
+
 
         wsc.CallService(planService, new[] { "mesh_index" }, new[] { indexVal.ToString() }, planService);
 
@@ -182,16 +163,33 @@ public class MeshObjectParser : MonoBehaviour {
             Debug.Log("Planning failed!");
             //Should probably display a UI telling the user that the planning has failed
             //Should set everything back to normal
+            canvas.SetActive(false);
+            yield break;
         }
-        
+        else {
+            Debug.Log("plan succeeded!");
+        }
 
-        //The grasp is planned, should display the gesture and allow the user to choose whether to accept the grasp or not
+        canvas.SetActive(false);
+        armController.wait_for_execute = true;
+        while (armController.wait_for_execute) {
+            yield return null;
+        }
 
-        //For now, let's just assume that the user always execute the plan
-        wsc.CallService(exeService, new string[0], new string[0], exeService);
-        //after executed, maybe check if the execution is successful?
+        if (armController.execte_grasp) {
+            //The grasp is planned, should display the gesture and allow the user to choose whether to accept the grasp or not
 
-        Debug.Log("action executed!");
+            //For now, let's just assume that the user always execute the plan
+            wsc.CallService(exeService, new string[0], new string[0], exeService);
+            //after executed, maybe check if the execution is successful?
+
+            Debug.Log("action executed!");
+        }
+        else {
+            Debug.Log("action cancelled!");
+        }
+
+
         //wait for 3 seconds
         yield return new WaitForSeconds(2f);
 
@@ -211,11 +209,11 @@ public class MeshObjectParser : MonoBehaviour {
 
     //convert ROS position to Unity Position
     Vector3 RosToUnityPositionAxisConversion(Vector3 rosIn) {
-        //return new Vector3(-rosIn.x, rosIn.z, -rosIn.y);
+        return new Vector3(-rosIn.x, rosIn.z, -rosIn.y);
 
-        Vector3 pos = new Vector3(-rosIn.x, rosIn.z, -rosIn.y);
-        Vector3 newPos = Quaternion.Euler(0, 90, 0) * pos;
-        return Quaternion.Euler(0, 0, 90) * newPos;
+        //Vector3 pos = new Vector3(-rosIn.x, rosIn.z, -rosIn.y);
+        //Vector3 newPos = Quaternion.Euler(0, 90, 0) * pos;
+        //return Quaternion.Euler(0, 0, 90) * newPos;
 
         //return rosIn;
     }
