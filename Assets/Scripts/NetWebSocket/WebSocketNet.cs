@@ -17,6 +17,8 @@ limitations under the License.
 // this class (System.Net.WebSockets) requires .NET 4.5+ to compile and Windows 8+ to work
 // This defines the WebSocketNet class which offers a websocket using the .NET framework
 
+
+using UnityEngine;
 using System;
 using System.IO;
 using System.Net.WebSockets;

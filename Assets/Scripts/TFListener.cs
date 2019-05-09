@@ -73,7 +73,7 @@ public class TFListener : MonoBehaviour
                     cur.transform.localScale = new Vector3(scale, scale, scale);
 
                     // setup point cloud base position
-                    if (cur.name == "head_camera_linkPivot") {
+                    if (cur.name == "head_camera_rgb_optical_framePivot") {
                         pointCloud.position = cur.transform.position;
                         pointCloud.rotation = cur.transform.rotation;
                         //meshObjects.position = cur.transform.position;

@@ -25,6 +25,9 @@ public class MeshObjectParser : MonoBehaviour {
 
     public bool scanMode = false;
 
+    private bool is_running = false;
+    private bool replace = false;
+
     private int maxPoints = 60000;  // max points allowed in one mesh
     //we probably don't want several mesh object for the same object. When that happens, maybe just clip the object
     Color[] categories = { Color.red, Color.blue, Color.cyan, Color.yellow, Color.black, new Color(1f, 0f, 1f, 1f), new Color(0f, 0f, 188f / 255f, 1f) };
@@ -58,7 +61,13 @@ public class MeshObjectParser : MonoBehaviour {
     }
     
     IEnumerator createMesh() {
-
+        if (is_running) {
+            replace = true;
+        }
+        else {
+            is_running = true;
+            replace = false;
+        }
 
         while (!wsc.services.ContainsKey(meshService)) {
             //Debug.Log("service result haven't been returned");
@@ -132,6 +141,11 @@ public class MeshObjectParser : MonoBehaviour {
 
         //next step is to select the object and plan grasp
         while (!armController.selection_checked) {
+            if (replace) {
+                destroy_mesh();
+                replace = false;
+                yield break;
+            }
             yield return null;
         }
 
@@ -153,6 +167,11 @@ public class MeshObjectParser : MonoBehaviour {
         wsc.CallService(planService, new[] { "mesh_index" }, new[] { indexVal.ToString() }, planService);
 
         while(!wsc.services.ContainsKey(planService)) {
+            if (replace) {
+                destroy_mesh();
+                replace = false;
+                yield break;
+            }
             yield return null;
         }
         string plan_message = wsc.services[planService];
@@ -173,6 +192,11 @@ public class MeshObjectParser : MonoBehaviour {
         canvas.SetActive(false);
         armController.wait_for_execute = true;
         while (armController.wait_for_execute) {
+            if (replace) {
+                destroy_mesh();
+                replace = false;
+                yield break;
+            }
             yield return null;
         }
 

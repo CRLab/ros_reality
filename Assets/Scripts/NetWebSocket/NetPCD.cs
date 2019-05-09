@@ -149,11 +149,11 @@ public class NetPCD : MonoBehaviour {
 
     //convert ROS position to Unity Position
     Vector3 RosToUnityPositionAxisConversion(Vector3 rosIn) {
-        //return new Vector3(-rosIn.x, rosIn.z, -rosIn.y);
+        return new Vector3(-rosIn.x, rosIn.z, -rosIn.y);
 
-        Vector3 pos = new Vector3(-rosIn.x, rosIn.z, -rosIn.y);
-        Vector3 newPos = Quaternion.Euler(0, 90, 0) * pos;
-        return Quaternion.Euler(0, 0, 90) * newPos;
+        //Vector3 pos = new Vector3(-rosIn.x, rosIn.z, -rosIn.y);
+        //Vector3 newPos = Quaternion.Euler(0, 90, 0) * pos;
+        //return Quaternion.Euler(0, 0, 90) * newPos;
 
         //return rosIn;
     }
