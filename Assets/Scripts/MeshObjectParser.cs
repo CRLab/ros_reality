@@ -219,6 +219,7 @@ public class MeshObjectParser : MonoBehaviour {
 
         // reset mesh
         destroy_mesh();
+        is_running = false;
 
     }
 
