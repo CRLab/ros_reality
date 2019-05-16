@@ -1,6 +1,8 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
+using System.Collections;
+using System;
 
 public class ArmController : MonoBehaviour {
     // string of which arm to control. Valid values are "left" and "right"
@@ -46,6 +48,9 @@ public class ArmController : MonoBehaviour {
     //int count = 0;
     private Color cur_color;
 
+    public GameObject cameraRig;
+    private Quaternion angle;
+
     void Awake() {
         trackedObj = GetComponent<SteamVR_TrackedObject>();
         baselink = GameObject.Find("base_linkPivot");
@@ -74,8 +79,23 @@ public class ArmController : MonoBehaviour {
         // InvokeRepeating("SendControls", .1f, .1f);
         if(arm == "left") {
             InvokeRepeating("CheckMove", .1f, .1f);
+            //cameraRig = GameObject.Find("Camera (eye)");
+            //StartCoroutine("CheckHeadRotation");
         }
-        
+
+    }
+
+    IEnumerator CheckHeadRotation() {
+            //            Vector3 pos = headCam.transform.position + (headCam.transform.forward * 0.5f);
+            //            pos = UnityToRosPositionAxisConversion(pos);
+
+            //            string msg =
+            //               "pointHead^" +
+            //               pos.x + "," + pos.y + "," + pos.z;
+            //            wsc.SendEinMessage(msg);
+            //            return;
+            //        }
+        yield return 0;
     }
 
     void FixedUpdate() {
@@ -94,6 +114,16 @@ public class ArmController : MonoBehaviour {
         }
     }
     
+    public void rotate_head() {
+        Vector3 pos = headCam.transform.position + (headCam.transform.forward * 0.5f);
+        pos = UnityToRosPositionAxisConversion(pos);
+
+        string msg =
+           "pointHead^" +
+           pos.x + "," + pos.y + "," + pos.z;
+        wsc.SendEinMessage(msg);
+        return;
+    }
     //for the left gripper to control the robot to move
     void CheckMove() {
         if (triggerDownMove) {

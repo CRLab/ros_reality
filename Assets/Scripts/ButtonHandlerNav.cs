@@ -26,6 +26,7 @@ public class ButtonHandlerNav : MonoBehaviour {
             canvas.SetActive(false);
             ButtonParent.SetActive(false);
             LeftController.GetComponent<ArmController>().buttonEnabled = false;
+            LeftController.GetComponent<ArmController>().rotate_head();
         }
     }
 }
